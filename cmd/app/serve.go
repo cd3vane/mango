@@ -45,6 +45,11 @@ func runServe(parent context.Context, cfg *Config) error {
 	var plannerAgent *agent.Agent
 
 	for _, ac := range cfg.Agents {
+		if ac.LLM.Provider == "" {
+			log.Printf("warn: agent %q has no LLM provider configured — skipping. Edit config and restart.", ac.Name)
+			continue
+		}
+
 		llmClient, err := llm.NewClient(llm.ProviderConfig{
 			Provider: ac.LLM.Provider,
 			Model:    ac.LLM.Model,
@@ -87,6 +92,10 @@ func runServe(parent context.Context, cfg *Config) error {
 		if a.Role == "orchestrator" {
 			plannerAgent = a
 		}
+	}
+
+	if len(runners) == 0 {
+		log.Printf("warn: no agents configured — tasks will fail. Run 'mango agent create' or edit config.yaml.")
 	}
 
 	var planner *orchestrator.Planner

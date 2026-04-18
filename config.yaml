@@ -1,1 +1,13 @@
 agents:
+  - name: orchestrator
+    role: orchestrator
+    llm:
+      provider: ""
+      model: ""
+      api_key: ""
+
+  - name: worker
+    llm:
+      provider: ""
+      model: ""
+      api_key: ""
