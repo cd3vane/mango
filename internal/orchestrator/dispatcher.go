@@ -66,8 +66,8 @@ func (d *Dispatcher) Get(id string) (*Task, bool) {
 	if !ok {
 		return nil, false
 	}
-	_copy := *t
-	return &_copy, true
+	taskCopy := *t
+	return &taskCopy, true
 }
 
 func (d *Dispatcher) update(id string, fn func(*Task)) {

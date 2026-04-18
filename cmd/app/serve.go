@@ -130,17 +130,14 @@ func runServe(parent context.Context, cfg *Config) error {
 		router := discord.NewRouter(bindings)
 		history := discord.NewChannelHistory(discord.DefaultHistorySize)
 		bot, err := discord.NewBot(cfg.Discord.Token, router, history, dispatcher, cfg.Discord.Global)
-
-		defer func(bot *discord.Bot) {
-			err := bot.Close()
-			if err != nil {
-
-			}
-		}(bot)
-
 		if err != nil {
 			return err
 		}
+		defer func() {
+			if err := bot.Close(); err != nil {
+				log.Printf("discord: close: %v", err)
+			}
+		}()
 
 		if err := bot.Start(ctx); err != nil {
 			return err

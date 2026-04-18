@@ -47,7 +47,7 @@ echo "  5. Copy config to /etc/mango/config.yaml"
 echo ""
 echo "You will be prompted for your sudo password."
 echo ""
-read -p "Continue? (y/n) " -n 1 -r
+read -p "Continue? (y/n) " -n 1 -r </dev/tty
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 	echo "Aborted."
@@ -116,15 +116,15 @@ sudo chown mango:mango /usr/local/bin/mango
 # Optional interactive Discord setup
 DISCORD_CONFIGURED=0
 echo ""
-read -p "Configure Discord bot now? (y/N) " -n 1 -r
+read -p "Configure Discord bot now? (y/N) " -n 1 -r </dev/tty
 echo
 if [[ $REPLY =~ ^[Yy]$ ]] && [ -f /etc/mango/config.yaml ]; then
-	read -p "  Discord bot token: " discord_token
+	read -p "  Discord bot token: " discord_token </dev/tty
 	if [ -n "$discord_token" ]; then
 		echo "  Bind the bot to:"
 		echo "    [g] all channels (global)"
 		echo "    [c] a specific list of channel IDs"
-		read -p "  Choose [g/c]: " -n 1 -r bind_mode
+		read -p "  Choose [g/c]: " -n 1 -r bind_mode </dev/tty
 		echo
 
 		discord_global="false"
@@ -133,9 +133,9 @@ if [[ $REPLY =~ ^[Yy]$ ]] && [ -f /etc/mango/config.yaml ]; then
 		if [[ $bind_mode =~ ^[Gg]$ ]]; then
 			discord_global="true"
 		else
-			read -p "  Channel IDs (comma-separated): " channels_csv
+			read -p "  Channel IDs (comma-separated): " channels_csv </dev/tty
 			if [ -n "$channels_csv" ]; then
-				read -p "  Bind channels to which agent? [worker]: " bind_agent
+				read -p "  Bind channels to which agent? [worker]: " bind_agent </dev/tty
 				bind_agent="${bind_agent:-worker}"
 			fi
 		fi
@@ -175,14 +175,14 @@ configure_agent() {
 	local agent_name="$1"
 	echo ""
 	echo "--- Configure agent: $agent_name ---"
-	read -p "  provider (anthropic/openai/ollama, leave blank to skip): " provider
+	read -p "  provider (anthropic/openai/ollama, leave blank to skip): " provider </dev/tty
 	if [ -z "$provider" ]; then
 		echo "  skipped $agent_name"
 		return
 	fi
-	read -p "  model: " model
-	read -p "  api_key (or \${ENV_VAR}, leave blank for ollama): " api_key
-	read -p "  base_url (leave blank for default): " base_url
+	read -p "  model: " model </dev/tty
+	read -p "  api_key (or \${ENV_VAR}, leave blank for ollama): " api_key </dev/tty
+	read -p "  base_url (leave blank for default): " base_url </dev/tty
 
 	local args=(--config /etc/mango/config.yaml config agent edit "$agent_name" --provider "$provider" --model "$model")
 	if [ -n "$api_key" ]; then
@@ -196,7 +196,7 @@ configure_agent() {
 }
 
 echo ""
-read -p "Configure LLM providers now? (y/N) " -n 1 -r
+read -p "Configure LLM providers now? (y/N) " -n 1 -r </dev/tty
 echo
 CONFIGURED=0
 if [[ $REPLY =~ ^[Yy]$ ]]; then

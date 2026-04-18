@@ -13,6 +13,11 @@ import (
 	"github.com/carlosmaranje/mango/internal/orchestrator"
 )
 
+const (
+	taskPollMaxRetries    = 300
+	typingRefreshInterval = 8 * time.Second
+)
+
 type Bot struct {
 	session    *discordgo.Session
 	router     *Router
@@ -46,7 +51,6 @@ func (b *Bot) onReady(s *discordgo.Session, r *discordgo.Ready) {
 		log.Printf("discord: active binding: channel %s -> agent %q", cid, agent)
 	}
 
-	// Update status to "Watching tasks"
 	if err := s.UpdateStatusComplex(discordgo.UpdateStatusData{
 		Status: "online",
 		Activities: []*discordgo.Activity{
@@ -109,10 +113,8 @@ func (b *Bot) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		log.Printf("discord: message from %s in channel %s -> routed to agent %q", m.Author.Username, m.ChannelID, agentName)
 	}
 
-	// Clean content: remove bot mention if present
 	content := m.Content
 	if isMentioned {
-		// Replace both <@id> and <@!id>
 		mention1 := fmt.Sprintf("<@%s>", s.State.User.ID)
 		mention2 := fmt.Sprintf("<@!%s>", s.State.User.ID)
 		content = strings.ReplaceAll(content, mention1, "")
@@ -142,7 +144,7 @@ func (b *Bot) keepTyping(s *discordgo.Session, channelID string, done <-chan str
 	if err := s.ChannelTyping(channelID); err != nil {
 		log.Printf("discord: typing: %v", err)
 	}
-	ticker := time.NewTicker(8 * time.Second)
+	ticker := time.NewTicker(typingRefreshInterval)
 	defer ticker.Stop()
 	for {
 		select {
@@ -159,7 +161,7 @@ func (b *Bot) keepTyping(s *discordgo.Session, channelID string, done <-chan str
 
 func (b *Bot) waitAndReply(s *discordgo.Session, m *discordgo.MessageCreate, taskID string, typingDone chan<- struct{}) {
 	defer close(typingDone)
-	for i := 0; i < 300; i++ {
+	for range taskPollMaxRetries {
 		t, ok := b.dispatcher.Get(taskID)
 		if !ok {
 			return
@@ -175,6 +177,6 @@ func (b *Bot) waitAndReply(s *discordgo.Session, m *discordgo.MessageCreate, tas
 			}
 			return
 		}
-		waitOneSecond()
+		time.Sleep(time.Second)
 	}
 }

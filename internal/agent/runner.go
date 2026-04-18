@@ -108,7 +108,7 @@ func (r *Runner) loop(ctx context.Context) {
 	}
 }
 
-func (r *Runner) heartbeat(ctx context.Context) {
+func (r *Runner) heartbeat(_ context.Context) {
 	if r.Agent.Memory == nil {
 		return
 	}

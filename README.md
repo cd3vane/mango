@@ -25,11 +25,13 @@ You can use the provided `install.sh` script to quickly set up Mango as a system
 
 #### Quick Install (via curl)
 
+**Install:**
 ```bash
-# To install
 curl -sSL https://raw.githubusercontent.com/carlosmaranje/mango/main/install.sh | bash
+```
 
-# To uninstall
+**Uninstall:**
+```bash
 curl -sSL https://raw.githubusercontent.com/carlosmaranje/mango/main/install.sh | bash -s -- uninstall
 ```
 

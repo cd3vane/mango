@@ -1,11 +1,11 @@
 package agent
 
 import (
+	"slices"
 	"sync"
 
 	"github.com/carlosmaranje/mango/internal/llm"
 	"github.com/carlosmaranje/mango/internal/memory"
-	"github.com/carlosmaranje/mango/internal/tools"
 )
 
 type SessionStore struct {
@@ -38,7 +38,6 @@ type Agent struct {
 	Role         string
 	Capabilities []string
 	LLM          llm.Client
-	Tools        []tools.Tool
 	Memory       memory.Store
 	Session      *SessionStore
 	AuthCreds    map[string]string
@@ -46,10 +45,5 @@ type Agent struct {
 }
 
 func (a *Agent) HasCapability(cap string) bool {
-	for _, c := range a.Capabilities {
-		if c == cap {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(a.Capabilities, cap)
 }

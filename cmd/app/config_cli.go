@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
@@ -45,6 +46,17 @@ func newConfigShowCmd() *cobra.Command {
 	}
 }
 
+func writeViperConfig(v *viper.Viper) error {
+	if v.ConfigFileUsed() == "" {
+		path := configPath
+		if path == "" {
+			path = defaultConfigPath()
+		}
+		return v.WriteConfigAs(path)
+	}
+	return v.WriteConfig()
+}
+
 func newConfigSetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "set <key> <value>",
@@ -56,14 +68,7 @@ func newConfigSetCmd() *cobra.Command {
 				return err
 			}
 			v.Set(args[0], args[1])
-			if v.ConfigFileUsed() == "" {
-				path := configPath
-				if path == "" {
-					path = defaultConfigPath()
-				}
-				return v.WriteConfigAs(path)
-			}
-			return v.WriteConfig()
+			return writeViperConfig(v)
 		},
 	}
 }
@@ -153,15 +158,7 @@ func newConfigAgentAddCmd() *cobra.Command {
 			}
 			agents = append(agents, newAgent)
 			v.Set("agents", agents)
-
-			if v.ConfigFileUsed() == "" {
-				path := configPath
-				if path == "" {
-					path = defaultConfigPath()
-				}
-				return v.WriteConfigAs(path)
-			}
-			return v.WriteConfig()
+			return writeViperConfig(v)
 		},
 	}
 
