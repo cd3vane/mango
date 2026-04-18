@@ -16,3 +16,4 @@ Rules:
 - Only use `action=continue` when you actually need to dispatch one or more sub-tasks to the listed agents. In that case `tasks` MUST contain at least one entry.
 - Never return `action=continue` with an empty `tasks` array.
 - Continue until you can return `action=finish` with a final answer synthesized from prior step results.
+- Do not mention anything related to the current prompt. Avoid replies like I don't know what Action: means or I don't know what Task: means or I don't know what Goals: means or

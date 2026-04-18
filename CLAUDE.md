@@ -15,7 +15,7 @@ CLI (mango <cmd>)
   Gateway Server  ─────────────────────────────────────
        │                                               │
        ▼                                               ▼
-  Dispatcher ──► Planner (orchestrator agent)    Discord Bot
+  Dispatcher ──► Orchestrator (orchestrator agent)    Discord Bot
        │              │                               │
        ▼              ▼ FanOut                        ▼
    Agent Runners  (parallel goroutines)       router.Resolve(channelID)
@@ -36,7 +36,7 @@ CLI (mango <cmd>)
 | `cmd/app` | CLI entry point, Cobra commands, Unix socket HTTP client |
 | `internal/gateway` | Unix socket HTTP server + route handlers |
 | `internal/agent` | Agent struct, Registry, Runner goroutine loop |
-| `internal/orchestrator` | Task, Dispatcher, ReAct-style Planner |
+| `internal/orchestrator` | Task, Dispatcher, ReAct-style Orchestrator |
 | `internal/discord` | Discord bot + channel router |
 | `internal/llm` | LLM interface + Anthropic/OpenAI/Ollama clients |
 | `internal/memory` | SQLite key-value store per agent |
@@ -78,7 +78,7 @@ mango serve
 
 `install.sh` builds the binary, installs the systemd unit, creates the `mango` system user, and writes a starter config to `/etc/mango/config.yaml` from `config/config.default.yaml` (orchestrator + worker scaffolding with empty LLM fields). It also seeds the per-agent prompt directory by copying `config/agents/<name>/PULSE.md` → `/etc/mango/agents/<name>/PULSE.md` for any agent whose prompt file doesn't yet exist. It then runs two optional interactive prompts:
 
-- **Discord setup**: asks for a bot token, then whether to bind the bot globally (all channels → orchestrator/planner) or to a comma-separated list of channel IDs (each bound to a chosen agent, default `worker`). A `discord:` block (and `bindings:` if channels were provided) is prepended to the installed config.
+- **Discord setup**: asks for a bot token, then whether to bind the bot globally (all channels → orchestrator) or to a comma-separated list of channel IDs (each bound to a chosen agent, default `worker`). A `discord:` block (and `bindings:` if channels were provided) is prepended to the installed config.
 - **LLM setup**: for each of `orchestrator` and `worker`, prompts for provider / model / api_key / base_url and applies them via `mango config agent edit`. Leaving provider blank skips that agent.
 
 Skipping either step prints an `ACTION REQUIRED` block with the file path to edit and the `systemctl daemon-reload && systemctl restart mango` commands to apply changes.
@@ -89,8 +89,8 @@ Skipping either step prints an `ACTION REQUIRED` block with the file path to edi
 
 Every agent's system prompt lives in a Markdown file named `PULSE.md` under `<configDir>/agents/<agent-name>/PULSE.md`, where `<configDir>` is the directory containing the loaded `config.yaml`. For the default install that resolves to `/etc/mango/agents/<agent-name>/PULSE.md`.
 
-- **No hardcoded prompts.** `internal/agent/runner.go` and `internal/orchestrator/planner.go` no longer carry a default system prompt string. At startup, `serve.go` reads each agent's `PULSE.md`, trims it, and sets `Agent.SystemPrompt`. Startup fails hard if the file is missing or empty — this is intentional: an agent with no persona should not silently run with stub behavior.
-- **Orchestrator PULSE.md** must encode the JSON schema contract (`action`, `tasks`, `final`) that `parsePlannerResponse` expects. The default shipped in `config/agents/orchestrator/PULSE.md` is the reference — edit carefully. The dynamic agent catalog (names + capabilities pulled from the live registry) is still appended by `planner.agentCatalog()`; don't duplicate it in the MD.
+- **No hardcoded prompts.** `internal/agent/runner.go` and `internal/orchestrator/orchestrator.go` no longer carry a default system prompt string. At startup, `serve.go` reads each agent's `PULSE.md`, trims it, and sets `Agent.SystemPrompt`. Startup fails hard if the file is missing or empty — this is intentional: an agent with no persona should not silently run with stub behavior.
+- **Orchestrator PULSE.md** must encode the JSON schema contract (`action`, `tasks`, `final`) that `parseOrchestratorResponse` expects. The default shipped in `config/agents/orchestrator/PULSE.md` is the reference — edit carefully. The dynamic agent catalog (names + capabilities pulled from the live registry) is still appended by `orchestrator.agentCatalog()`; don't duplicate it in the MD.
 - **Worker / custom agents** can contain any persona, tone, tool-use guidelines, etc. Edit `PULSE.md`, then `sudo systemctl restart mango` to reload.
 - **Path helper**: `AgentPromptPath(configDir, agentName)` in `cmd/app/config.go` is the single source of truth for where the file lives; the filename constant is `AgentPromptFile = "PULSE.md"`.
 
@@ -107,7 +107,7 @@ Edit `/etc/mango/config.yaml` (or use the `mango config` CLI) to define your age
 
 agents:
   - name: manager
-    role: orchestrator              # optional: acts as task planner
+    role: orchestrator              # optional: acts as task orchestrator
     llm:
       provider: anthropic
       model: claude-3-5-haiku-20241022
@@ -154,7 +154,7 @@ mango agent list
 # Route to a specific agent:
 mango task submit "Summarize Go 1.24 release notes" --agent researcher
 
-# Route through orchestrator (planner decomposes + fans out):
+# Route through orchestrator (orchestrator decomposes + fans out):
 mango task submit "Research and summarize Go 1.24 features"
 
 # Submit and wait for result:
@@ -167,9 +167,9 @@ mango task status <task-id>
 ```
 
 ### 7. Discord (optional)
-With `discord.token` set and channel bindings configured, users can message the bot in Discord. Messages in bound channels go directly to the named agent; unbound channels route through the orchestrator planner.
+With `discord.token` set and channel bindings configured, users can message the bot in Discord. Messages in bound channels go directly to the named agent; unbound channels route through the orchestrator.
 
-While the model is thinking the bot keeps a typing indicator active (refreshed every 8s). Per-channel conversation history (last 100 messages, `internal/discord/context.go`) is injected into the LLM call for both the direct-agent and planner paths, so follow-up messages preserve context.
+While the model is thinking the bot keeps a typing indicator active (refreshed every 8s). Per-channel conversation history (last 100 messages, `internal/discord/context.go`) is injected into the LLM call for both the direct-agent and orchestrator paths, so follow-up messages preserve context.
 
 ---
 
@@ -180,7 +180,7 @@ mango task submit "goal"
   └─► POST /tasks  (HTTP over Unix socket)
         └─► dispatcher.Submit(goal, agentName)          # or SubmitWithHistory from Discord
               ├─ agentName set   → RunOnAgentWithHistory → runner.executeTask → LLM.Complete
-              └─ agentName ""   → planner.Run(goal, history, d) (ReAct loop, max 5 steps)
+              └─ agentName ""   → orchestrator.Run(goal, history, d) (ReAct loop, max 5 steps)
                     └─► dispatcher.FanOut (parallel agent goroutines)
                           └─► each runner → LLM → result
                     └─► orchestrator LLM synthesizes final answer
@@ -203,5 +203,5 @@ mango task submit "goal"
 ## Notable Gaps (Current State)
 - `tools.Tool` interface exists but no implementations are wired to agents yet
 - Token cap is hardcoded at 1024 per LLM call (`runner.go`)
-- Planner fails hard if goal takes more than 5 orchestration steps
+- Orchestrator fails hard if goal takes more than 5 orchestration steps
 - Anthropic prompt caching is not enabled — each Discord turn re-sends the full history uncached

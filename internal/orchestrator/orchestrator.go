@@ -13,15 +13,15 @@ import (
 
 const DefaultMaxSteps = 5
 
-type PlannedTask struct {
+type OrchestratedTask struct {
 	Agent string `json:"agent"`
 	Goal  string `json:"goal"`
 }
 
-type plannerResponse struct {
-	Action string        `json:"action"`
-	Tasks  []PlannedTask `json:"tasks"`
-	Final  string        `json:"final,omitempty"`
+type orchestratorResponse struct {
+	Action string             `json:"action"`
+	Tasks  []OrchestratedTask `json:"tasks"`
+	Final  string             `json:"final,omitempty"`
 }
 
 type StepResult struct {
@@ -31,22 +31,22 @@ type StepResult struct {
 	Err    error
 }
 
-type Planner struct {
+type Orchestrator struct {
 	Agent    *agent.Agent
 	MaxSteps int
 	Registry *agent.Registry
 }
 
-func NewPlanner(a *agent.Agent, reg *agent.Registry) *Planner {
-	return &Planner{Agent: a, Registry: reg, MaxSteps: DefaultMaxSteps}
+func NewOrchestrator(a *agent.Agent, reg *agent.Registry) *Orchestrator {
+	return &Orchestrator{Agent: a, Registry: reg, MaxSteps: DefaultMaxSteps}
 }
 
-func (p *Planner) Run(ctx context.Context, goal string, history []llm.Message, d *Dispatcher) (string, error) {
+func (p *Orchestrator) Run(ctx context.Context, goal string, history []llm.Message, d *Dispatcher) (string, error) {
 	if p.Agent == nil || p.Agent.LLM == nil {
-		return "", fmt.Errorf("planner agent has no LLM client")
+		return "", fmt.Errorf("orchestrator agent has no LLM client")
 	}
 	if p.Agent.SystemPrompt == "" {
-		return "", fmt.Errorf("planner agent %q has no system prompt (expected PULSE.md)", p.Agent.Name)
+		return "", fmt.Errorf("orchestrator agent %q has no system prompt (expected PULSE.md)", p.Agent.Name)
 	}
 	maxSteps := p.MaxSteps
 	if maxSteps <= 0 {
@@ -68,11 +68,11 @@ func (p *Planner) Run(ctx context.Context, goal string, history []llm.Message, d
 			MaxTokens: 1024,
 		})
 		if err != nil {
-			return "", fmt.Errorf("planner LLM: %w", err)
+			return "", fmt.Errorf("orchestrator LLM: %w", err)
 		}
-		parsed, err := parsePlannerResponse(raw)
+		parsed, err := parseOrchestratorResponse(raw)
 		if err != nil || parsed == nil {
-			log.Printf("planner: model %q returned non-JSON; treating reply as final answer (raw=%q, err=%v)", p.Agent.Model, raw, err)
+			log.Printf("orchestrator: model %q returned non-JSON; treating reply as final answer (raw=%q, err=%v)", p.Agent.Model, raw, err)
 			return strings.TrimSpace(raw), nil
 		}
 
@@ -86,7 +86,7 @@ func (p *Planner) Run(ctx context.Context, goal string, history []llm.Message, d
 			if parsed.Final != "" {
 				return parsed.Final, nil
 			}
-			log.Printf("planner: model %q returned action=continue with no tasks; retrying with corrective hint (raw=%q)", p.Agent.Model, raw)
+			log.Printf("orchestrator: model %q returned action=continue with no tasks; retrying with corrective hint (raw=%q)", p.Agent.Model, raw)
 			messages = append(messages,
 				llm.Message{Role: "assistant", Content: raw},
 				llm.Message{Role: "user", Content: "Your previous response had action=continue with no tasks, which is invalid. If the goal can be answered from context, respond with action=finish and put the answer in \"final\". Otherwise, dispatch at least one task."},
@@ -101,10 +101,10 @@ func (p *Planner) Run(ctx context.Context, goal string, history []llm.Message, d
 		)
 	}
 
-	return "", fmt.Errorf("planner exceeded max steps (%d)", maxSteps)
+	return "", fmt.Errorf("orchestrator exceeded max steps (%d)", maxSteps)
 }
 
-func (p *Planner) agentCatalog() string {
+func (p *Orchestrator) agentCatalog() string {
 	if p.Registry == nil {
 		return ""
 	}
@@ -119,9 +119,9 @@ func (p *Planner) agentCatalog() string {
 	return b.String()
 }
 
-func parsePlannerResponse(raw string) (*plannerResponse, error) {
+func parseOrchestratorResponse(raw string) (*orchestratorResponse, error) {
 	candidate := stripJSONFence(strings.TrimSpace(raw))
-	var resp plannerResponse
+	var resp orchestratorResponse
 	if err := json.Unmarshal([]byte(candidate), &resp); err == nil {
 		if resp.Action == "" {
 			return nil, fmt.Errorf("missing action")

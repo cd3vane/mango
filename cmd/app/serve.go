@@ -43,7 +43,7 @@ func runServe(parent context.Context, cfg *Config) error {
 	runners := map[string]*agent.Runner{}
 	closers := []func() error{}
 
-	var plannerAgent *agent.Agent
+	var orchestratorAgent *agent.Agent
 
 	for _, ac := range cfg.Agents {
 		if ac.LLM.Provider == "" {
@@ -102,7 +102,7 @@ func runServe(parent context.Context, cfg *Config) error {
 			return err
 		}
 		if a.Role == "orchestrator" {
-			plannerAgent = a
+			orchestratorAgent = a
 		}
 	}
 
@@ -110,11 +110,11 @@ func runServe(parent context.Context, cfg *Config) error {
 		log.Printf("warn: no agents configured — tasks will fail. Run 'mango agent create' or edit configuration.")
 	}
 
-	var planner *orchestrator.Planner
-	if plannerAgent != nil {
-		planner = orchestrator.NewPlanner(plannerAgent, registry)
+	var orch *orchestrator.Orchestrator
+	if orchestratorAgent != nil {
+		orch = orchestrator.NewOrchestrator(orchestratorAgent, registry)
 	}
-	dispatcher := orchestrator.NewDispatcher(registry, runners, planner)
+	dispatcher := orchestrator.NewDispatcher(registry, runners, orch)
 
 	gw := gateway.NewServer(cfg.SocketPath, registry, runners, dispatcher)
 	if err := gw.Start(ctx); err != nil {

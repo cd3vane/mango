@@ -5,18 +5,9 @@ import (
 	"testing"
 
 	"github.com/carlosmaranje/goclaw/internal/agent"
-	"github.com/carlosmaranje/goclaw/internal/llm"
 )
 
-type mockLLM struct {
-	response string
-}
-
-func (m *mockLLM) Complete(ctx context.Context, req llm.CompletionRequest) (string, error) {
-	return m.response, nil
-}
-
-func TestPlannerRun_NonJSONResponseTreatedAsFinalAnswer(t *testing.T) {
+func TestOrchestratorRun_NonJSONResponseTreatedAsFinalAnswer(t *testing.T) {
 	mock := &mockLLM{response: "Nice to meet you, Carlos!"}
 	a := &agent.Agent{
 		Name:         "test-orchestrator",
@@ -26,10 +17,10 @@ func TestPlannerRun_NonJSONResponseTreatedAsFinalAnswer(t *testing.T) {
 		SystemPrompt: "You are the orchestrator.",
 	}
 	reg := agent.NewRegistry()
-	p := NewPlanner(a, reg)
-	d := NewDispatcher(reg, nil, p)
+	orch := NewOrchestrator(a, reg)
+	d := NewDispatcher(reg, nil, orch)
 
-	result, err := p.Run(context.Background(), "my name is Carlos", nil, d)
+	result, err := orch.Run(context.Background(), "my name is Carlos", nil, d)
 	if err != nil {
 		t.Fatalf("expected non-JSON reply to be treated as final answer, got error: %v", err)
 	}
@@ -38,7 +29,7 @@ func TestPlannerRun_NonJSONResponseTreatedAsFinalAnswer(t *testing.T) {
 	}
 }
 
-func TestPlannerRun_JSONWithPreamble(t *testing.T) {
+func TestOrchestratorRun_JSONWithPreamble(t *testing.T) {
 	mock := &mockLLM{response: `Sure! Here is my plan: {"action":"finish","final":"hello there"}`}
 	a := &agent.Agent{
 		Name:         "test-orchestrator",
@@ -48,10 +39,10 @@ func TestPlannerRun_JSONWithPreamble(t *testing.T) {
 		SystemPrompt: "You are the orchestrator.",
 	}
 	reg := agent.NewRegistry()
-	p := NewPlanner(a, reg)
-	d := NewDispatcher(reg, nil, p)
+	orch := NewOrchestrator(a, reg)
+	d := NewDispatcher(reg, nil, orch)
 
-	result, err := p.Run(context.Background(), "greet me", nil, d)
+	result, err := orch.Run(context.Background(), "greet me", nil, d)
 	if err != nil {
 		t.Fatalf("expected JSON with preamble to parse, got error: %v", err)
 	}

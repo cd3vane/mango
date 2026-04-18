@@ -99,11 +99,11 @@ func (b *Bot) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if isDM {
-			log.Printf("discord: message from %s in DM (falling back to planner)", m.Author.Username)
+			log.Printf("discord: message from %s in DM (falling back to orchestrator)", m.Author.Username)
 		} else if isMentioned {
-			log.Printf("discord: message from %s in channel %s (mentioned, falling back to planner)", m.Author.Username, m.ChannelID)
+			log.Printf("discord: message from %s in channel %s (mentioned, falling back to orchestrator)", m.Author.Username, m.ChannelID)
 		} else {
-			log.Printf("discord: message from %s in channel %s (global mode, falling back to planner)", m.Author.Username, m.ChannelID)
+			log.Printf("discord: message from %s in channel %s (global mode, falling back to orchestrator)", m.Author.Username, m.ChannelID)
 		}
 	} else {
 		log.Printf("discord: message from %s in channel %s -> routed to agent %q", m.Author.Username, m.ChannelID, agentName)

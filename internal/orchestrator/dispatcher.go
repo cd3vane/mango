@@ -19,15 +19,15 @@ type Dispatcher struct {
 	mu    sync.RWMutex
 	tasks map[string]*Task
 
-	planner *Planner
+	orchestrator *Orchestrator
 }
 
-func NewDispatcher(reg *agent.Registry, runners map[string]*agent.Runner, planner *Planner) *Dispatcher {
+func NewDispatcher(reg *agent.Registry, runners map[string]*agent.Runner, orch *Orchestrator) *Dispatcher {
 	return &Dispatcher{
-		registry: reg,
-		runners:  runners,
-		tasks:    make(map[string]*Task),
-		planner:  planner,
+		registry:     reg,
+		runners:      runners,
+		tasks:        make(map[string]*Task),
+		orchestrator: orch,
 	}
 }
 
@@ -82,8 +82,8 @@ func (d *Dispatcher) update(id string, fn func(*Task)) {
 func (d *Dispatcher) run(ctx context.Context, task *Task) {
 	d.update(task.ID, func(t *Task) { t.Status = StatusRunning })
 
-	if task.AgentName == "" && d.planner != nil {
-		result, err := d.planner.Run(ctx, task.Goal, task.History, d)
+	if task.AgentName == "" && d.orchestrator != nil {
+		result, err := d.orchestrator.Run(ctx, task.Goal, task.History, d)
 		d.finalize(task.ID, result, err)
 		return
 	}
@@ -131,12 +131,12 @@ func (d *Dispatcher) RunOnAgentWithHistory(ctx context.Context, agentName, goal 
 	}
 }
 
-func (d *Dispatcher) FanOut(ctx context.Context, steps []PlannedTask) []StepResult {
+func (d *Dispatcher) FanOut(ctx context.Context, steps []OrchestratedTask) []StepResult {
 	var wg sync.WaitGroup
 	results := make([]StepResult, len(steps))
 	for i, step := range steps {
 		wg.Add(1)
-		go func(idx int, s PlannedTask) {
+		go func(idx int, s OrchestratedTask) {
 			defer wg.Done()
 			out, err := d.RunOnAgent(ctx, s.Agent, s.Goal)
 			results[idx] = StepResult{Agent: s.Agent, Goal: s.Goal, Result: out, Err: err}

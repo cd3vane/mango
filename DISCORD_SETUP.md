@@ -41,12 +41,12 @@ To bind a channel to an agent (e.g., `researcher`):
 You can repeat this for multiple channels and agents.
 
 ### Direct Messages (DMs)
-Mango automatically responds to Direct Messages. If you message the bot privately, it will use the **Planner** to handle your request, as DMs are not bound to specific agents by default.
+Mango automatically responds to Direct Messages. If you message the bot privately, it will use the **Orchestrator** to handle your request, as DMs are not bound to specific agents by default.
 
 ### Mentions and "Global" Listening
 By default, Mango only responds in:
 1.  **Bound Channels**: Where a specific agent is assigned.
-2.  **Mentions**: Any channel where the bot is mentioned (it will use the Planner).
+2.  **Mentions**: Any channel where the bot is mentioned (it will use the Orchestrator).
 3.  **Direct Messages**: Private conversations with the bot.
 
 If you want the bot to listen and respond to **every message in every channel** it has access to (without needing a mention), you can enable `global` mode:
