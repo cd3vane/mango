@@ -1,13 +1,16 @@
 agents:
-  - name: orchestrator
-    role: orchestrator
-    llm:
-      provider: ""
-      model: ""
-      api_key: ""
-
-  - name: worker
-    llm:
-      provider: ""
-      model: ""
-      api_key: ""
+    - name: orchestrator
+      role: orchestrator
+      llm:
+        provider: ollama
+        model: gemma4
+        api_key: ""
+    - name: worker
+      role: worker
+      llm:
+        provider: ollama
+        model: gemma4
+        api_key: ""
+discord:
+    global: false
+socket_path: /Users/carlosmaranje/.mango/mango.sock

@@ -117,7 +117,7 @@ func runServe(parent context.Context, cfg *Config) error {
 		}
 		router := discord.NewRouter(bindings)
 		history := discord.NewChannelHistory(discord.DefaultHistorySize)
-		bot, err := discord.NewBot(cfg.Discord.Token, router, history, dispatcher)
+		bot, err := discord.NewBot(cfg.Discord.Token, router, history, dispatcher, cfg.Discord.Global)
 
 		defer func(bot *discord.Bot) {
 			err := bot.Close()
@@ -133,7 +133,6 @@ func runServe(parent context.Context, cfg *Config) error {
 		if err := bot.Start(ctx); err != nil {
 			return err
 		}
-		log.Printf("discord: bot started")
 	} else {
 		log.Printf("discord: no token configured, skipping")
 	}

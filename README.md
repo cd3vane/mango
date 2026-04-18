@@ -6,7 +6,7 @@
 
 - **Multi-Agent Orchestration**: Automatically decompose high-level goals into sub-tasks for specialized agents.
 - **Provider Agnostic**: Built-in support for **Anthropic**, **OpenAI**, and local models via **Ollama**.
-- **Discord Integration**: Interact with specific agents or the whole system through Discord channels.
+- **Discord Integration**: Interact with specific agents or the whole system through Discord channels. See [DISCORD_SETUP.md](DISCORD_SETUP.md) for a detailed guide.
 - **CLI Control Plane**: A powerful command-line interface to manage the gateway, check status, and dispatch tasks.
 - **Persistent Memory**: SQLite-backed key-value store for agents to maintain state across sessions.
 - **Unix Socket Gateway**: Efficient local communication between the CLI and the background server.
@@ -17,7 +17,7 @@
 
 - [Go](https://golang.org/doc/install) 1.24+
 - [Ollama](https://ollama.com/) (optional, for local models)
-- A Discord Bot Token (for Discord integration)
+- A Discord Bot Token (for Discord integration, see [DISCORD_SETUP.md](DISCORD_SETUP.md))
 
 ### Installation
 

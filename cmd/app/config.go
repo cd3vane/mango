@@ -13,9 +13,9 @@ import (
 )
 
 type LLMConfig struct {
-	Provider string `mapstructure:"provider" yaml:"provider,omitempty"`
-	Model    string `mapstructure:"model" yaml:"model,omitempty"`
-	APIKey   string `mapstructure:"api_key" yaml:"api_key,omitempty"`
+	Provider string `mapstructure:"provider" yaml:"provider"`
+	Model    string `mapstructure:"model" yaml:"model"`
+	APIKey   string `mapstructure:"api_key" yaml:"api_key"`
 	BaseURL  string `mapstructure:"base_url" yaml:"base_url,omitempty"`
 }
 
@@ -24,7 +24,7 @@ type AgentConfig struct {
 	WorkDir      string            `mapstructure:"work_dir" yaml:"work_dir,omitempty"`
 	Role         string            `mapstructure:"role" yaml:"role,omitempty"`
 	Capabilities []string          `mapstructure:"capabilities" yaml:"capabilities,omitempty"`
-	LLM          LLMConfig         `mapstructure:"llm" yaml:"llm,omitempty"`
+	LLM          LLMConfig         `mapstructure:"llm" yaml:"llm"`
 	AuthCreds    map[string]string `mapstructure:"auth_creds" yaml:"auth_creds,omitempty"`
 }
 
@@ -34,7 +34,8 @@ type BindingConfig struct {
 }
 
 type DiscordConfig struct {
-	Token string `mapstructure:"token" yaml:"token,omitempty"`
+	Token  string `mapstructure:"token" yaml:"token,omitempty"`
+	Global bool   `mapstructure:"global" yaml:"global,omitempty"`
 }
 
 type Config struct {

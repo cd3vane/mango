@@ -31,3 +31,13 @@ func (r *Router) Bind(channelID, agentName string) {
 	defer r.mu.Unlock()
 	r.bindings[channelID] = agentName
 }
+
+func (r *Router) Bindings() map[string]string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make(map[string]string, len(r.bindings))
+	for k, v := range r.bindings {
+		out[k] = v
+	}
+	return out
+}

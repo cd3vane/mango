@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -16,23 +17,46 @@ type Bot struct {
 	router     *Router
 	history    *ChannelHistory
 	dispatcher *orchestrator.Dispatcher
+	global     bool
 }
 
-func NewBot(token string, router *Router, history *ChannelHistory, dispatcher *orchestrator.Dispatcher) (*Bot, error) {
+func NewBot(token string, router *Router, history *ChannelHistory, dispatcher *orchestrator.Dispatcher, global bool) (*Bot, error) {
 	sess, err := discordgo.New("Bot " + token)
 	if err != nil {
 		return nil, fmt.Errorf("discord session: %w", err)
 	}
-	sess.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
+	sess.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent | discordgo.IntentsGuildPresences
 
 	b := &Bot{
 		session:    sess,
 		router:     router,
 		history:    history,
 		dispatcher: dispatcher,
+		global:     global,
 	}
 	sess.AddHandler(b.onMessage)
+	sess.AddHandler(b.onReady)
 	return b, nil
+}
+
+func (b *Bot) onReady(s *discordgo.Session, r *discordgo.Ready) {
+	log.Printf("discord: bot ready as %s#%s", s.State.User.Username, s.State.User.Discriminator)
+	for cid, agent := range b.router.Bindings() {
+		log.Printf("discord: active binding: channel %s -> agent %q", cid, agent)
+	}
+
+	// Update status to "Watching tasks"
+	if err := s.UpdateStatusComplex(discordgo.UpdateStatusData{
+		Status: "online",
+		Activities: []*discordgo.Activity{
+			{
+				Name: "for tasks",
+				Type: discordgo.ActivityTypeWatching,
+			},
+		},
+	}); err != nil {
+		log.Printf("discord: update status: %v", err)
+	}
 }
 
 func (b *Bot) Start(ctx context.Context) error {
@@ -58,17 +82,54 @@ func (b *Bot) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	isDM := m.GuildID == ""
+	isMentioned := false
+	for _, u := range m.Mentions {
+		if u.ID == s.State.User.ID {
+			isMentioned = true
+			break
+		}
+	}
+
 	agentName := b.router.Resolve(m.ChannelID)
-	b.history.Append(m.ChannelID, llm.Message{Role: "user", Content: m.Content})
+	if agentName == "" {
+		if !isDM && !isMentioned && !b.global {
+			return
+		}
+
+		if isDM {
+			log.Printf("discord: message from %s in DM (falling back to planner)", m.Author.Username)
+		} else if isMentioned {
+			log.Printf("discord: message from %s in channel %s (mentioned, falling back to planner)", m.Author.Username, m.ChannelID)
+		} else {
+			log.Printf("discord: message from %s in channel %s (global mode, falling back to planner)", m.Author.Username, m.ChannelID)
+		}
+	} else {
+		log.Printf("discord: message from %s in channel %s -> routed to agent %q", m.Author.Username, m.ChannelID, agentName)
+	}
+
+	// Clean content: remove bot mention if present
+	content := m.Content
+	if isMentioned {
+		// Replace both <@id> and <@!id>
+		mention1 := fmt.Sprintf("<@%s>", s.State.User.ID)
+		mention2 := fmt.Sprintf("<@!%s>", s.State.User.ID)
+		content = strings.ReplaceAll(content, mention1, "")
+		content = strings.ReplaceAll(content, mention2, "")
+		content = strings.TrimSpace(content)
+	}
+
+	b.history.Append(m.ChannelID, llm.Message{Role: "user", Content: content})
 
 	ctx := context.Background()
-	task, err := b.dispatcher.Submit(ctx, m.Content, agentName)
+	task, err := b.dispatcher.Submit(ctx, content, agentName)
 	if err != nil {
 		log.Printf("discord: dispatch: %v", err)
 		_, _ = s.ChannelMessageSendReply(m.ChannelID, "error: "+err.Error(), m.Reference())
 		return
 	}
 
+	log.Printf("discord: task %s submitted for %s", task.ID, m.Author.Username)
 	go b.waitAndReply(s, m, task.ID)
 }
 
