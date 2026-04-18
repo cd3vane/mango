@@ -15,7 +15,7 @@ import (
 type LLMConfig struct {
 	Provider string `mapstructure:"provider" yaml:"provider"`
 	Model    string `mapstructure:"model" yaml:"model"`
-	APIKey   string `mapstructure:"api_key" yaml:"api_key"`
+	APIKey   string `mapstructure:"api_key" yaml:"api_key,omitempty"`
 	BaseURL  string `mapstructure:"base_url" yaml:"base_url,omitempty"`
 }
 

@@ -224,10 +224,14 @@ func pollTask(cmd *cobra.Command, client *gatewayClient, id string) error {
 
 func newAgentCreateCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "create <name>",
-		Short: "Scaffold a new agent definition file",
-		Args:  cobra.ExactArgs(1),
+		Use:        "create <name>",
+		Short:      "Scaffold a new agent definition file (deprecated; use 'mango add agent')",
+		Args:       cobra.ExactArgs(1),
+		Deprecated: `use "mango add agent" instead`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Fprintln(cmd.ErrOrStderr(),
+				`Warning: "agent create" is deprecated and will be removed in a future version. Use "mango add agent" instead.`)
+
 			name := args[0]
 			if name == "" {
 				return fmt.Errorf("agent name cannot be empty")

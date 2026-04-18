@@ -29,6 +29,7 @@ func main() {
 	root.AddCommand(
 		newServeCmd(),
 		newStatusCmd(),
+		newAddCmd(),
 		newAgentCmd(),
 		newTaskCmd(),
 		newConfigCmd(),
