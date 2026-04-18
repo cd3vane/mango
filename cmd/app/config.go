@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,35 +13,35 @@ import (
 )
 
 type LLMConfig struct {
-	Provider string `mapstructure:"provider"`
-	Model    string `mapstructure:"model"`
-	APIKey   string `mapstructure:"api_key"`
-	BaseURL  string `mapstructure:"base_url"`
+	Provider string `mapstructure:"provider" yaml:"provider,omitempty"`
+	Model    string `mapstructure:"model" yaml:"model,omitempty"`
+	APIKey   string `mapstructure:"api_key" yaml:"api_key,omitempty"`
+	BaseURL  string `mapstructure:"base_url" yaml:"base_url,omitempty"`
 }
 
 type AgentConfig struct {
-	Name         string            `mapstructure:"name"`
-	WorkDir      string            `mapstructure:"work_dir"`
-	Role         string            `mapstructure:"role"`
-	Capabilities []string          `mapstructure:"capabilities"`
-	LLM          LLMConfig         `mapstructure:"llm"`
-	AuthCreds    map[string]string `mapstructure:"auth_creds"`
+	Name         string            `mapstructure:"name" yaml:"name"`
+	WorkDir      string            `mapstructure:"work_dir" yaml:"work_dir,omitempty"`
+	Role         string            `mapstructure:"role" yaml:"role,omitempty"`
+	Capabilities []string          `mapstructure:"capabilities" yaml:"capabilities,omitempty"`
+	LLM          LLMConfig         `mapstructure:"llm" yaml:"llm,omitempty"`
+	AuthCreds    map[string]string `mapstructure:"auth_creds" yaml:"auth_creds,omitempty"`
 }
 
 type BindingConfig struct {
-	ChannelID string `mapstructure:"channel_id"`
-	Agent     string `mapstructure:"agent"`
+	ChannelID string `mapstructure:"channel_id" yaml:"channel_id"`
+	Agent     string `mapstructure:"agent" yaml:"agent"`
 }
 
 type DiscordConfig struct {
-	Token string `mapstructure:"token"`
+	Token string `mapstructure:"token" yaml:"token,omitempty"`
 }
 
 type Config struct {
-	SocketPath string          `mapstructure:"socket_path"`
-	Discord    DiscordConfig   `mapstructure:"discord"`
-	Agents     []AgentConfig   `mapstructure:"agents"`
-	Bindings   []BindingConfig `mapstructure:"bindings"`
+	SocketPath string          `mapstructure:"socket_path" yaml:"socket_path,omitempty"`
+	Discord    DiscordConfig   `mapstructure:"discord" yaml:"discord,omitempty"`
+	Agents     []AgentConfig   `mapstructure:"agents" yaml:"agents,omitempty"`
+	Bindings   []BindingConfig `mapstructure:"bindings" yaml:"bindings,omitempty"`
 }
 
 func defaultSocketPath() string {
@@ -53,15 +54,16 @@ func defaultSocketPath() string {
 	return fmt.Sprintf("/var/run/%s/%s.sock", constants.AppName, constants.AppName)
 }
 
-func loadConfig(path string) (*Config, error) {
+func loadRawViper(path string) (*viper.Viper, error) {
 	v := viper.New()
 	v.SetDefault("socket_path", defaultSocketPath())
-	v.AutomaticEnv()
-
 	if path != "" {
 		v.SetConfigFile(path)
 		if err := v.ReadInConfig(); err != nil {
-			return nil, fmt.Errorf("read config %s: %w", path, err)
+			var configFileNotFoundError viper.ConfigFileNotFoundError
+			if !errors.As(err, &configFileNotFoundError) && !os.IsNotExist(err) {
+				return nil, fmt.Errorf("read config %s: %w", path, err)
+			}
 		}
 	} else {
 		v.SetConfigName("config")
@@ -71,6 +73,15 @@ func loadConfig(path string) (*Config, error) {
 		v.AddConfigPath(fmt.Sprintf("/etc/%s", constants.AppName))
 		_ = v.ReadInConfig()
 	}
+	return v, nil
+}
+
+func loadConfig(path string) (*Config, error) {
+	v, err := loadRawViper(path)
+	if err != nil {
+		return nil, err
+	}
+	v.AutomaticEnv()
 
 	var cfg Config
 	if err := v.Unmarshal(&cfg); err != nil {
