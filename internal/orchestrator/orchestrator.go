@@ -74,15 +74,24 @@ func (p *Orchestrator) Run(ctx context.Context, goal string, history []llm.Messa
 		}
 		parsed, err := parseOrchestratorResponse(raw)
 		if err != nil || parsed == nil {
-			log.Printf("orchestrator: model %q returned non-JSON; treating reply as final answer (raw=%q, err=%v)", p.Agent.Model, raw, err)
-			return strings.TrimSpace(raw), nil
+			log.Printf("orchestrator: model %q returned non-JSON (raw=%q, err=%v). Retrying with corrective hint...", p.Agent.Model, raw, err)
+			messages = append(messages,
+				llm.Message{Role: "assistant", Content: raw},
+				llm.Message{Role: "user", Content: "ERROR: Your response was not a valid JSON object. Please respond ONLY with a JSON object matching the schema. No preamble, no markdown fences. Remember to always include \"action\", \"tasks\", and \"final\" keys."},
+			)
+			continue
 		}
 
 		if parsed.Action == "finish" {
 			if parsed.Final != "" {
 				return parsed.Final, nil
 			}
-			return raw, nil
+			log.Printf("orchestrator: model %q returned action=finish with empty \"final\"; retrying with corrective hint (raw=%q)", p.Agent.Model, raw)
+			messages = append(messages,
+				llm.Message{Role: "assistant", Content: raw},
+				llm.Message{Role: "user", Content: "ERROR: You set action=finish but provided an empty \"final\" field. Please provide your final answer in the \"final\" field."},
+			)
+			continue
 		}
 		if len(parsed.Tasks) == 0 {
 			if parsed.Final != "" {

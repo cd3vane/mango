@@ -7,8 +7,11 @@ import (
 	"github.com/carlosmaranje/goclaw/internal/agent"
 )
 
-func TestOrchestratorRun_NonJSONResponseTreatedAsFinalAnswer(t *testing.T) {
-	mock := &mockLLM{response: "Nice to meet you, Carlos!"}
+func TestOrchestratorRun_RetriesOnNonJSON(t *testing.T) {
+	mock := &mockLLM{responses: []string{
+		"Bad response, not JSON",
+		`{"action":"finish","final":"Fixed response"}`},
+	}
 	a := &agent.Agent{
 		Name:         "test-orchestrator",
 		Role:         "orchestrator",
@@ -20,17 +23,20 @@ func TestOrchestratorRun_NonJSONResponseTreatedAsFinalAnswer(t *testing.T) {
 	orch := NewOrchestrator(a, reg)
 	d := NewDispatcher(reg, nil, orch)
 
-	result, err := orch.Run(context.Background(), "my name is Carlos", nil, d)
+	result, err := orch.Run(context.Background(), "hi", nil, d)
 	if err != nil {
-		t.Fatalf("expected non-JSON reply to be treated as final answer, got error: %v", err)
+		t.Fatalf("expected retry to succeed, got error: %v", err)
 	}
-	if result != "Nice to meet you, Carlos!" {
-		t.Errorf("expected raw text returned as final answer, got %q", result)
+	if result != "Fixed response" {
+		t.Errorf("expected %q, got %q", "Fixed response", result)
+	}
+	if mock.CallCount() != 2 {
+		t.Errorf("expected 2 calls, got %d", mock.CallCount())
 	}
 }
 
-func TestOrchestratorRun_JSONWithPreamble(t *testing.T) {
-	mock := &mockLLM{response: `Sure! Here is my plan: {"action":"finish","final":"hello there"}`}
+func TestOrchestratorRun_ExceedsMaxStepsOnConstantNonJSON(t *testing.T) {
+	mock := &mockLLM{response: "Still not JSON"}
 	a := &agent.Agent{
 		Name:         "test-orchestrator",
 		Role:         "orchestrator",
@@ -40,13 +46,14 @@ func TestOrchestratorRun_JSONWithPreamble(t *testing.T) {
 	}
 	reg := agent.NewRegistry()
 	orch := NewOrchestrator(a, reg)
+	orch.MaxSteps = 3
 	d := NewDispatcher(reg, nil, orch)
 
-	result, err := orch.Run(context.Background(), "greet me", nil, d)
-	if err != nil {
-		t.Fatalf("expected JSON with preamble to parse, got error: %v", err)
+	_, err := orch.Run(context.Background(), "hi", nil, d)
+	if err == nil {
+		t.Fatal("expected error after exceeding max steps, got nil")
 	}
-	if result != "hello there" {
-		t.Errorf("expected %q, got %q", "hello there", result)
+	if mock.CallCount() != 3 {
+		t.Errorf("expected 3 calls, got %d", mock.CallCount())
 	}
 }
