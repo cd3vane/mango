@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/carlosmaranje/goclaw/internal/constants"
+	"github.com/carlosmaranje/mango/internal/constants"
 )
 
 type LLMConfig struct {

@@ -1,6 +1,28 @@
 #!/bin/bash
 set -e
 
+REPO_URL="https://github.com/carlosmaranje/mango.git"
+
+# Support for uninstallation even if running remotely
+if [[ "$1" == "uninstall" ]]; then
+	echo "Delegating to uninstall script..."
+	if [ ! -f "uninstall.sh" ]; then
+		echo "Uninstall script not found locally. Cloning from $REPO_URL..."
+		TMP_DIR=$(mktemp -d)
+		git clone --depth 1 "$REPO_URL" "$TMP_DIR"
+		cd "$TMP_DIR"
+	fi
+	exec ./uninstall.sh
+fi
+
+# Support for remote execution (curl -sSL ... | bash)
+if [ ! -d "cmd/app" ] || [ ! -f "go.mod" ]; then
+	echo "Mango source not found in current directory. Cloning from $REPO_URL..."
+	TMP_DIR=$(mktemp -d)
+	git clone --depth 1 "$REPO_URL" "$TMP_DIR"
+	cd "$TMP_DIR"
+fi
+
 echo "Mango Agent Gateway Installer"
 echo "=============================="
 echo ""

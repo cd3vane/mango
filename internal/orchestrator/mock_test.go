@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
+	"github.com/carlosmaranje/mango/internal/llm"
 )
 
 // mockLLM is a test-only LLM client. Set either `response` for a single fixed

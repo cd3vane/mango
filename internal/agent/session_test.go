@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
+	"github.com/carlosmaranje/mango/internal/llm"
 )
 
 func TestSessionStore_AppendAndSnapshot(t *testing.T) {

@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/carlosmaranje/goclaw/internal/agent"
-	"github.com/carlosmaranje/goclaw/internal/llm"
+	"github.com/carlosmaranje/mango/internal/agent"
+	"github.com/carlosmaranje/mango/internal/llm"
 )
 
 type Dispatcher struct {

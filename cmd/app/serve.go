@@ -12,13 +12,13 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/carlosmaranje/goclaw/internal/agent"
-	"github.com/carlosmaranje/goclaw/internal/constants"
-	"github.com/carlosmaranje/goclaw/internal/discord"
-	"github.com/carlosmaranje/goclaw/internal/gateway"
-	"github.com/carlosmaranje/goclaw/internal/llm"
-	"github.com/carlosmaranje/goclaw/internal/memory"
-	"github.com/carlosmaranje/goclaw/internal/orchestrator"
+	"github.com/carlosmaranje/mango/internal/agent"
+	"github.com/carlosmaranje/mango/internal/constants"
+	"github.com/carlosmaranje/mango/internal/discord"
+	"github.com/carlosmaranje/mango/internal/gateway"
+	"github.com/carlosmaranje/mango/internal/llm"
+	"github.com/carlosmaranje/mango/internal/memory"
+	"github.com/carlosmaranje/mango/internal/orchestrator"
 )
 
 func newServeCmd() *cobra.Command {

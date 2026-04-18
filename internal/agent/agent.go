@@ -3,9 +3,9 @@ package agent
 import (
 	"sync"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
-	"github.com/carlosmaranje/goclaw/internal/memory"
-	"github.com/carlosmaranje/goclaw/internal/tools"
+	"github.com/carlosmaranje/mango/internal/llm"
+	"github.com/carlosmaranje/mango/internal/memory"
+	"github.com/carlosmaranje/mango/internal/tools"
 )
 
 type SessionStore struct {

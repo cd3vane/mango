@@ -21,10 +21,36 @@
 
 ### Installation
 
+You can use the provided `install.sh` script to quickly set up Mango as a systemd service (Linux only):
+
+#### Quick Install (via curl)
+
+```bash
+# To install
+curl -sSL https://raw.githubusercontent.com/carlosmaranje/mango/main/install.sh | bash
+
+# To uninstall
+curl -sSL https://raw.githubusercontent.com/carlosmaranje/mango/main/install.sh | bash -s -- uninstall
+```
+
+#### Local Installation
+
+If you have already cloned the repository:
+
+```bash
+# To install
+./install.sh
+
+# To uninstall
+./install.sh uninstall
+```
+
+Alternatively, you can build and run it manually:
+
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/carlosmaranje/goclaw.git
-    cd goclaw
+    git clone https://github.com/carlosmaranje/mango.git
+    cd mango
     ```
 
 2.  **Build the binary**:

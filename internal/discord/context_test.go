@@ -3,7 +3,7 @@ package discord
 import (
 	"testing"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
+	"github.com/carlosmaranje/mango/internal/llm"
 )
 
 func TestChannelHistory_DefaultSize(t *testing.T) {

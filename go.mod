@@ -1,4 +1,4 @@
-module github.com/carlosmaranje/goclaw
+module github.com/carlosmaranje/mango
 
 go 1.24.0
 

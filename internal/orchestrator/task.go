@@ -3,7 +3,7 @@ package orchestrator
 import (
 	"time"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
+	"github.com/carlosmaranje/mango/internal/llm"
 )
 
 const (

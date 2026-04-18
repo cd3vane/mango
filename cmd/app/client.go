@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/carlosmaranje/goclaw/internal/constants"
+	"github.com/carlosmaranje/mango/internal/constants"
 )
 
 type gatewayClient struct {

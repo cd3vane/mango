@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
+	"github.com/carlosmaranje/mango/internal/llm"
 )
 
 type captureLLM struct {

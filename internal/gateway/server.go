@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/carlosmaranje/goclaw/internal/agent"
-	"github.com/carlosmaranje/goclaw/internal/orchestrator"
+	"github.com/carlosmaranje/mango/internal/agent"
+	"github.com/carlosmaranje/mango/internal/orchestrator"
 )
 
 type Server struct {

@@ -9,8 +9,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
-	"github.com/carlosmaranje/goclaw/internal/orchestrator"
+	"github.com/carlosmaranje/mango/internal/llm"
+	"github.com/carlosmaranje/mango/internal/orchestrator"
 )
 
 type Bot struct {

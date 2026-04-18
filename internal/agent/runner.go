@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/carlosmaranje/goclaw/internal/llm"
+	"github.com/carlosmaranje/mango/internal/llm"
 )
 
 type TaskEnvelope struct {

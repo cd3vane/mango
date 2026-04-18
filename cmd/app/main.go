@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/carlosmaranje/goclaw/internal/constants"
+	"github.com/carlosmaranje/mango/internal/constants"
 )
 
 var configPath string
