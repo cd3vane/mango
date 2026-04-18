@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/carlosmaranje/goclaw/internal/agent"
+	"github.com/carlosmaranje/goclaw/internal/llm"
 )
 
 type Dispatcher struct {
@@ -37,6 +38,10 @@ func newTaskID() string {
 }
 
 func (d *Dispatcher) Submit(ctx context.Context, goal, agentName string) (*Task, error) {
+	return d.SubmitWithHistory(ctx, goal, agentName, nil)
+}
+
+func (d *Dispatcher) SubmitWithHistory(ctx context.Context, goal, agentName string, history []llm.Message) (*Task, error) {
 	task := &Task{
 		ID:        newTaskID(),
 		Goal:      goal,
@@ -44,6 +49,7 @@ func (d *Dispatcher) Submit(ctx context.Context, goal, agentName string) (*Task,
 		Status:    StatusPending,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
+		History:   history,
 	}
 	d.mu.Lock()
 	d.tasks[task.ID] = task
@@ -77,12 +83,12 @@ func (d *Dispatcher) run(ctx context.Context, task *Task) {
 	d.update(task.ID, func(t *Task) { t.Status = StatusRunning })
 
 	if task.AgentName == "" && d.planner != nil {
-		result, err := d.planner.Run(ctx, task.Goal, d)
+		result, err := d.planner.Run(ctx, task.Goal, task.History, d)
 		d.finalize(task.ID, result, err)
 		return
 	}
 
-	result, err := d.RunOnAgent(ctx, task.AgentName, task.Goal)
+	result, err := d.RunOnAgentWithHistory(ctx, task.AgentName, task.Goal, task.History)
 	d.finalize(task.ID, result, err)
 }
 
@@ -99,6 +105,10 @@ func (d *Dispatcher) finalize(id, result string, err error) {
 }
 
 func (d *Dispatcher) RunOnAgent(ctx context.Context, agentName, goal string) (string, error) {
+	return d.RunOnAgentWithHistory(ctx, agentName, goal, nil)
+}
+
+func (d *Dispatcher) RunOnAgentWithHistory(ctx context.Context, agentName, goal string, history []llm.Message) (string, error) {
 	runner, ok := d.runners[agentName]
 	if !ok {
 		return "", fmt.Errorf("no runner registered for agent %q", agentName)
@@ -108,9 +118,10 @@ func (d *Dispatcher) RunOnAgent(ctx context.Context, agentName, goal string) (st
 	}
 	reply := make(chan agent.TaskResult, 1)
 	runner.Submit(agent.TaskEnvelope{
-		ID:    newTaskID(),
-		Goal:  goal,
-		Reply: reply,
+		ID:      newTaskID(),
+		Goal:    goal,
+		Reply:   reply,
+		History: history,
 	})
 	select {
 	case <-ctx.Done():

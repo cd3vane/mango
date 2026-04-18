@@ -14,6 +14,7 @@ type TaskEnvelope struct {
 	Goal     string
 	Reply    chan<- TaskResult
 	Metadata map[string]string
+	History  []llm.Message
 }
 
 type TaskResult struct {
@@ -114,7 +115,7 @@ func (r *Runner) heartbeat(ctx context.Context) {
 }
 
 func (r *Runner) executeTask(ctx context.Context, env TaskEnvelope) {
-	result, err := r.invokeLLM(ctx, env.Goal)
+	result, err := r.invokeLLM(ctx, env.Goal, env.History)
 	if env.Reply != nil {
 		select {
 		case env.Reply <- TaskResult{ID: env.ID, Result: result, Err: err}:
@@ -123,14 +124,16 @@ func (r *Runner) executeTask(ctx context.Context, env TaskEnvelope) {
 	}
 }
 
-func (r *Runner) invokeLLM(ctx context.Context, goal string) (string, error) {
+func (r *Runner) invokeLLM(ctx context.Context, goal string, history []llm.Message) (string, error) {
 	if r.Agent.LLM == nil {
 		return "", fmt.Errorf("agent %q has no LLM client", r.Agent.Name)
 	}
 	messages := []llm.Message{
 		{Role: "system", Content: fmt.Sprintf("You are agent %q. Capabilities: %v.", r.Agent.Name, r.Agent.Capabilities)},
 	}
-	if r.Agent.Session != nil {
+	if len(history) > 0 {
+		messages = append(messages, history...)
+	} else if r.Agent.Session != nil {
 		messages = append(messages, r.Agent.Session.Snapshot()...)
 	}
 	messages = append(messages, llm.Message{Role: "user", Content: goal})
@@ -143,7 +146,7 @@ func (r *Runner) invokeLLM(ctx context.Context, goal string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if r.Agent.Session != nil {
+	if len(history) == 0 && r.Agent.Session != nil {
 		r.Agent.Session.Append(llm.Message{Role: "user", Content: goal})
 		r.Agent.Session.Append(llm.Message{Role: "assistant", Content: out})
 	}

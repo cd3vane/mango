@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 
@@ -119,10 +120,11 @@ func (b *Bot) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 		content = strings.TrimSpace(content)
 	}
 
+	priorHistory := b.history.Get(m.ChannelID)
 	b.history.Append(m.ChannelID, llm.Message{Role: "user", Content: content})
 
 	ctx := context.Background()
-	task, err := b.dispatcher.Submit(ctx, content, agentName)
+	task, err := b.dispatcher.SubmitWithHistory(ctx, content, agentName, priorHistory)
 	if err != nil {
 		log.Printf("discord: dispatch: %v", err)
 		_, _ = s.ChannelMessageSendReply(m.ChannelID, "error: "+err.Error(), m.Reference())
@@ -130,10 +132,33 @@ func (b *Bot) onMessage(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	log.Printf("discord: task %s submitted for %s", task.ID, m.Author.Username)
-	go b.waitAndReply(s, m, task.ID)
+
+	typingDone := make(chan struct{})
+	go b.keepTyping(s, m.ChannelID, typingDone)
+	go b.waitAndReply(s, m, task.ID, typingDone)
 }
 
-func (b *Bot) waitAndReply(s *discordgo.Session, m *discordgo.MessageCreate, taskID string) {
+func (b *Bot) keepTyping(s *discordgo.Session, channelID string, done <-chan struct{}) {
+	if err := s.ChannelTyping(channelID); err != nil {
+		log.Printf("discord: typing: %v", err)
+	}
+	ticker := time.NewTicker(8 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-done:
+			return
+		case <-ticker.C:
+			if err := s.ChannelTyping(channelID); err != nil {
+				log.Printf("discord: typing: %v", err)
+				return
+			}
+		}
+	}
+}
+
+func (b *Bot) waitAndReply(s *discordgo.Session, m *discordgo.MessageCreate, taskID string, typingDone chan<- struct{}) {
+	defer close(typingDone)
 	for i := 0; i < 300; i++ {
 		t, ok := b.dispatcher.Get(taskID)
 		if !ok {

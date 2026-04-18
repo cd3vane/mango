@@ -28,7 +28,7 @@ func TestPlannerRun_NonJSONResponse(t *testing.T) {
 	p := NewPlanner(a, reg)
 	d := NewDispatcher(reg, nil, p)
 
-	_, err := p.Run(context.Background(), "test goal", d)
+	_, err := p.Run(context.Background(), "test goal", nil, d)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

@@ -6,7 +6,7 @@ import (
 	"github.com/carlosmaranje/goclaw/internal/llm"
 )
 
-const DefaultHistorySize = 20
+const DefaultHistorySize = 100
 
 type ChannelHistory struct {
 	mu      sync.Mutex

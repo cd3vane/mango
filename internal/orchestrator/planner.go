@@ -52,7 +52,7 @@ Respond with JSON only — no preamble, no markdown fences. Schema:
  
 Continue until you can return action=finish with a final answer synthesized from prior step results.`
 
-func (p *Planner) Run(ctx context.Context, goal string, d *Dispatcher) (string, error) {
+func (p *Planner) Run(ctx context.Context, goal string, history []llm.Message, d *Dispatcher) (string, error) {
 	if p.Agent == nil || p.Agent.LLM == nil {
 		return "", fmt.Errorf("planner agent has no LLM client")
 	}
@@ -63,8 +63,11 @@ func (p *Planner) Run(ctx context.Context, goal string, d *Dispatcher) (string, 
 
 	messages := []llm.Message{
 		{Role: "system", Content: plannerSystemPrompt + "\n\n" + p.agentCatalog()},
-		{Role: "user", Content: "Goal: " + goal},
 	}
+	if len(history) > 0 {
+		messages = append(messages, history...)
+	}
+	messages = append(messages, llm.Message{Role: "user", Content: "Goal: " + goal})
 
 	for step := 0; step < maxSteps; step++ {
 		raw, err := p.Agent.LLM.Complete(ctx, llm.CompletionRequest{
