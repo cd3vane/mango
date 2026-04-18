@@ -25,9 +25,14 @@ func NewOpenAICompatClient(cfg ProviderConfig) *OpenAICompatClient {
 }
 
 type openaiRequest struct {
-	Model     string    `json:"model"`
-	Messages  []Message `json:"messages"`
-	MaxTokens int       `json:"max_tokens,omitempty"`
+	Model          string                `json:"model"`
+	Messages       []Message             `json:"messages"`
+	MaxTokens      int                   `json:"max_tokens,omitempty"`
+	ResponseFormat *openaiResponseFormat `json:"response_format,omitempty"`
+}
+
+type openaiResponseFormat struct {
+	Type string `json:"type"`
 }
 
 type openaiChoice struct {
@@ -42,11 +47,15 @@ type openaiResponse struct {
 }
 
 func (c *OpenAICompatClient) Complete(ctx context.Context, req CompletionRequest) (string, error) {
-	body, err := json.Marshal(openaiRequest{
+	oreq := openaiRequest{
 		Model:     req.Model,
 		Messages:  req.Messages,
 		MaxTokens: req.MaxTokens,
-	})
+	}
+	if req.JSON {
+		oreq.ResponseFormat = &openaiResponseFormat{Type: "json_object"}
+	}
+	body, err := json.Marshal(oreq)
 	if err != nil {
 		return "", err
 	}

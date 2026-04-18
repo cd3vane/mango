@@ -11,6 +11,7 @@ type CompletionRequest struct {
 	Model     string
 	Messages  []Message
 	MaxTokens int
+	JSON      bool // If true, request JSON response format from the provider
 }
 
 type Client interface {

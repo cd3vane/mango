@@ -15,6 +15,7 @@ type TaskEnvelope struct {
 	Reply    chan<- TaskResult
 	Metadata map[string]string
 	History  []llm.Message
+	JSON     bool
 }
 
 type TaskResult struct {
@@ -115,7 +116,7 @@ func (r *Runner) heartbeat(ctx context.Context) {
 }
 
 func (r *Runner) executeTask(ctx context.Context, env TaskEnvelope) {
-	result, err := r.invokeLLM(ctx, env.Goal, env.History)
+	result, err := r.invokeLLM(ctx, env.Goal, env.History, env.JSON)
 	if env.Reply != nil {
 		select {
 		case env.Reply <- TaskResult{ID: env.ID, Result: result, Err: err}:
@@ -124,7 +125,7 @@ func (r *Runner) executeTask(ctx context.Context, env TaskEnvelope) {
 	}
 }
 
-func (r *Runner) invokeLLM(ctx context.Context, goal string, history []llm.Message) (string, error) {
+func (r *Runner) invokeLLM(ctx context.Context, goal string, history []llm.Message, jsonResponse bool) (string, error) {
 	if r.Agent.LLM == nil {
 		return "", fmt.Errorf("agent %q has no LLM client", r.Agent.Name)
 	}
@@ -145,6 +146,7 @@ func (r *Runner) invokeLLM(ctx context.Context, goal string, history []llm.Messa
 		Model:     r.Agent.Model,
 		Messages:  messages,
 		MaxTokens: 1024,
+		JSON:      jsonResponse,
 	})
 	if err != nil {
 		return "", err

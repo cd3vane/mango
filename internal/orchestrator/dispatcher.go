@@ -88,7 +88,7 @@ func (d *Dispatcher) run(ctx context.Context, task *Task) {
 		return
 	}
 
-	result, err := d.RunOnAgentWithHistory(ctx, task.AgentName, task.Goal, task.History)
+	result, err := d.RunOnAgentWithHistory(ctx, task.AgentName, task.Goal, task.History, false)
 	d.finalize(task.ID, result, err)
 }
 
@@ -104,11 +104,11 @@ func (d *Dispatcher) finalize(id, result string, err error) {
 	})
 }
 
-func (d *Dispatcher) RunOnAgent(ctx context.Context, agentName, goal string) (string, error) {
-	return d.RunOnAgentWithHistory(ctx, agentName, goal, nil)
+func (d *Dispatcher) RunOnAgent(ctx context.Context, agentName, goal string, jsonResponse bool) (string, error) {
+	return d.RunOnAgentWithHistory(ctx, agentName, goal, nil, jsonResponse)
 }
 
-func (d *Dispatcher) RunOnAgentWithHistory(ctx context.Context, agentName, goal string, history []llm.Message) (string, error) {
+func (d *Dispatcher) RunOnAgentWithHistory(ctx context.Context, agentName, goal string, history []llm.Message, jsonResponse bool) (string, error) {
 	runner, ok := d.runners[agentName]
 	if !ok {
 		return "", fmt.Errorf("no runner registered for agent %q", agentName)
@@ -122,6 +122,7 @@ func (d *Dispatcher) RunOnAgentWithHistory(ctx context.Context, agentName, goal 
 		Goal:    goal,
 		Reply:   reply,
 		History: history,
+		JSON:    jsonResponse,
 	})
 	select {
 	case <-ctx.Done():
@@ -138,7 +139,7 @@ func (d *Dispatcher) FanOut(ctx context.Context, steps []OrchestratedTask) []Ste
 		wg.Add(1)
 		go func(idx int, s OrchestratedTask) {
 			defer wg.Done()
-			out, err := d.RunOnAgent(ctx, s.Agent, s.Goal)
+			out, err := d.RunOnAgent(ctx, s.Agent, s.Goal, s.JSON)
 			results[idx] = StepResult{Agent: s.Agent, Goal: s.Goal, Result: out, Err: err}
 		}(i, step)
 	}

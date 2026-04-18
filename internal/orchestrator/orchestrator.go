@@ -16,6 +16,7 @@ const DefaultMaxSteps = 5
 type OrchestratedTask struct {
 	Agent string `json:"agent"`
 	Goal  string `json:"goal"`
+	JSON  bool   `json:"json,omitempty"` // If true, the dispatcher will request a JSON response from the agent.
 }
 
 type orchestratorResponse struct {
@@ -66,6 +67,7 @@ func (p *Orchestrator) Run(ctx context.Context, goal string, history []llm.Messa
 			Model:     p.Agent.Model,
 			Messages:  messages,
 			MaxTokens: 1024,
+			JSON:      true,
 		})
 		if err != nil {
 			return "", fmt.Errorf("orchestrator LLM: %w", err)

@@ -23,7 +23,11 @@ func NewClient(cfg ProviderConfig) (Client, error) {
 		return NewOpenAICompatClient(cfg), nil
 	case "openai", "openai-compatible":
 		if cfg.BaseURL == "" {
-			return nil, fmt.Errorf("provider %q requires base_url", cfg.Provider)
+			if cfg.Provider == "openai" {
+				cfg.BaseURL = "https://api.openai.com/v1"
+			} else {
+				return nil, fmt.Errorf("provider %q requires base_url", cfg.Provider)
+			}
 		}
 		return NewOpenAICompatClient(cfg), nil
 	default:
