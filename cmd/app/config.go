@@ -45,6 +45,9 @@ type Config struct {
 }
 
 func defaultSocketPath() string {
+	if envPath := os.Getenv("MANGO_SOCKET_PATH"); envPath != "" {
+		return envPath
+	}
 	if runtime.GOOS == "darwin" {
 		home, err := os.UserHomeDir()
 		if err == nil {

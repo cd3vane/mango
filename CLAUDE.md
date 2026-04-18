@@ -44,13 +44,32 @@ CLI (mango <cmd>)
 
 ---
 
+## Socket Path Configuration
+
+The socket path (Unix domain socket for IPC) can be configured in three ways, in order of priority:
+
+1. **Config file** (`config.yaml`): Set `socket_path` explicitly
+2. **Environment variable**: `MANGO_SOCKET_PATH=/path/to/socket`
+3. **Default**: 
+   - macOS: `~/.mango/mango.sock`
+   - Linux: `/var/run/mango/mango.sock`
+
+Example with env var:
+```bash
+export MANGO_SOCKET_PATH=/tmp/mango.sock
+mango serve
+```
+
+---
+
 ## Logical Order to Run It
 
 ### 1. Configure (`config.yaml`)
 Edit `config.yaml` to define your agents, LLM providers, and optionally Discord and bindings.
 
 ```yaml
-socket_path: ~/.mango/mango.sock   # IPC socket
+# socket_path is optional (uses default if omitted):
+# socket_path: /custom/path/mango.sock
 
 agents:
   - name: manager
