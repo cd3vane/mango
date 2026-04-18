@@ -74,10 +74,21 @@ mango serve
 
 ---
 
+## Installation (Linux)
+
+`install.sh` builds the binary, installs the systemd unit, creates the `mango` system user, and writes a starter config to `/etc/mango/config.yaml` from `config/config.default.yaml` (orchestrator + worker scaffolding with empty LLM fields). It then runs two optional interactive prompts:
+
+- **Discord setup**: asks for a bot token, then whether to bind the bot globally (all channels → orchestrator/planner) or to a comma-separated list of channel IDs (each bound to a chosen agent, default `worker`). A `discord:` block (and `bindings:` if channels were provided) is prepended to the installed config.
+- **LLM setup**: for each of `orchestrator` and `worker`, prompts for provider / model / api_key / base_url and applies them via `mango config agent edit`. Leaving provider blank skips that agent.
+
+Skipping either step prints an `ACTION REQUIRED` block with the file path to edit and the `systemctl daemon-reload && systemctl restart mango` commands to apply changes.
+
+---
+
 ## Logical Order to Run It
 
 ### 1. Configuration
-Edit `/etc/mango/config.yaml` (or use the `mango config` CLI) to define your agents, LLM providers, and optionally Discord and bindings.
+Edit `/etc/mango/config.yaml` (or use the `mango config` CLI) to define your agents, LLM providers, and optionally Discord and bindings. The repo ships `config/config.default.yaml` as the minimal two-agent (orchestrator + worker) starter used by `install.sh`.
 
 ```yaml
 # socket_path is optional (uses default if omitted):
@@ -147,6 +158,8 @@ mango task status <task-id>
 ### 7. Discord (optional)
 With `discord.token` set and channel bindings configured, users can message the bot in Discord. Messages in bound channels go directly to the named agent; unbound channels route through the orchestrator planner.
 
+While the model is thinking the bot keeps a typing indicator active (refreshed every 8s). Per-channel conversation history (last 100 messages, `internal/discord/context.go`) is injected into the LLM call for both the direct-agent and planner paths, so follow-up messages preserve context.
+
 ---
 
 ## Request Flow (CLI Path)
@@ -154,9 +167,9 @@ With `discord.token` set and channel bindings configured, users can message the 
 ```
 mango task submit "goal"
   └─► POST /tasks  (HTTP over Unix socket)
-        └─► dispatcher.Submit(goal, agentName)
-              ├─ agentName set   → runner.executeTask → LLM.Complete
-              └─ agentName ""   → planner.Run (ReAct loop, max 5 steps)
+        └─► dispatcher.Submit(goal, agentName)          # or SubmitWithHistory from Discord
+              ├─ agentName set   → RunOnAgentWithHistory → runner.executeTask → LLM.Complete
+              └─ agentName ""   → planner.Run(goal, history, d) (ReAct loop, max 5 steps)
                     └─► dispatcher.FanOut (parallel agent goroutines)
                           └─► each runner → LLM → result
                     └─► orchestrator LLM synthesizes final answer
@@ -178,6 +191,6 @@ mango task submit "goal"
 
 ## Notable Gaps (Current State)
 - `tools.Tool` interface exists but no implementations are wired to agents yet
-- `ChannelHistory` per Discord channel is stored but not injected into LLM calls
 - Token cap is hardcoded at 1024 per LLM call (`runner.go`)
 - Planner fails hard if goal takes more than 5 orchestration steps
+- Anthropic prompt caching is not enabled — each Discord turn re-sends the full history uncached
