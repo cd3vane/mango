@@ -71,9 +71,9 @@ func (p *Planner) Run(ctx context.Context, goal string, history []llm.Message, d
 			return "", fmt.Errorf("planner LLM: %w", err)
 		}
 		parsed, err := parsePlannerResponse(raw)
-		if err != nil {
-			log.Printf("planner: model %q (%s) returned invalid response: %v (raw=%q)", p.Agent.Model, p.Agent.Role, err, raw)
-			return "", fmt.Errorf("the model %q might not be suitable for the %q role: it returned a non-JSON response", p.Agent.Model, p.Agent.Role)
+		if err != nil || parsed == nil {
+			log.Printf("planner: model %q returned non-JSON; treating reply as final answer (raw=%q, err=%v)", p.Agent.Model, raw, err)
+			return strings.TrimSpace(raw), nil
 		}
 
 		if parsed.Action == "finish" {
@@ -120,15 +120,23 @@ func (p *Planner) agentCatalog() string {
 }
 
 func parsePlannerResponse(raw string) (*plannerResponse, error) {
-	cleaned := stripJSONFence(strings.TrimSpace(raw))
+	candidate := stripJSONFence(strings.TrimSpace(raw))
 	var resp plannerResponse
-	if err := json.Unmarshal([]byte(cleaned), &resp); err != nil {
-		return nil, err
+	if err := json.Unmarshal([]byte(candidate), &resp); err == nil {
+		if resp.Action == "" {
+			return nil, fmt.Errorf("missing action")
+		}
+		return &resp, nil
 	}
-	if resp.Action == "" {
-		return nil, fmt.Errorf("missing action")
+	if obj, ok := extractJSONObject(candidate); ok {
+		if err := json.Unmarshal([]byte(obj), &resp); err == nil {
+			if resp.Action == "" {
+				return nil, fmt.Errorf("missing action")
+			}
+			return &resp, nil
+		}
 	}
-	return &resp, nil
+	return nil, fmt.Errorf("no parseable JSON object found")
 }
 
 func stripJSONFence(s string) string {
@@ -140,6 +148,45 @@ func stripJSONFence(s string) string {
 	s = strings.TrimPrefix(s, "```")
 	s = strings.TrimSuffix(s, "```")
 	return strings.TrimSpace(s)
+}
+
+// extractJSONObject returns the first balanced {...} block found in s.
+// It tolerates preambles ("Here's the plan: {...}") and trailing commentary.
+func extractJSONObject(s string) (string, bool) {
+	start := strings.Index(s, "{")
+	if start < 0 {
+		return "", false
+	}
+	depth := 0
+	inString := false
+	escape := false
+	for i := start; i < len(s); i++ {
+		c := s[i]
+		if escape {
+			escape = false
+			continue
+		}
+		if inString {
+			if c == '\\' {
+				escape = true
+			} else if c == '"' {
+				inString = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inString = true
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return s[start : i+1], true
+			}
+		}
+	}
+	return "", false
 }
 
 func renderStepResults(results []StepResult) string {
