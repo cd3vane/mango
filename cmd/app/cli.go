@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -32,7 +34,7 @@ func newStatusCmd() *cobra.Command {
 
 func newAgentCmd() *cobra.Command {
 	cmd := &cobra.Command{Use: "agent", Short: "Manage agents"}
-	cmd.AddCommand(newAgentListCmd(), newAgentStartCmd(), newAgentStopCmd())
+	cmd.AddCommand(newAgentListCmd(), newAgentStartCmd(), newAgentStopCmd(), newAgentCreateCmd())
 	return cmd
 }
 
@@ -217,5 +219,121 @@ func pollTask(cmd *cobra.Command, client *gatewayClient, id string) error {
 			return cmd.Context().Err()
 		case <-time.After(time.Second):
 		}
+	}
+}
+
+func newAgentCreateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "create",
+		Short: "Create a new agent interactively",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			scanner := bufio.NewScanner(os.Stdin)
+
+			fmt.Print("Agent name: ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read agent name")
+			}
+			name := strings.TrimSpace(scanner.Text())
+			if name == "" {
+				return fmt.Errorf("agent name cannot be empty")
+			}
+
+			fmt.Print("LLM provider [anthropic/openai/ollama]: ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read LLM provider")
+			}
+			provider := strings.TrimSpace(scanner.Text())
+			if provider == "" {
+				return fmt.Errorf("LLM provider cannot be empty")
+			}
+
+			fmt.Print("Model: ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read model")
+			}
+			model := strings.TrimSpace(scanner.Text())
+			if model == "" {
+				return fmt.Errorf("model cannot be empty")
+			}
+
+			fmt.Print("API key (or ${ENV_VAR}, leave blank for ollama): ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read API key")
+			}
+			apiKey := strings.TrimSpace(scanner.Text())
+
+			fmt.Print("Base URL (leave blank for defaults): ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read base URL")
+			}
+			baseURL := strings.TrimSpace(scanner.Text())
+
+			fmt.Print("Role (leave blank for none): ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read role")
+			}
+			role := strings.TrimSpace(scanner.Text())
+
+			fmt.Print("Capabilities (comma-separated, leave blank for none): ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read capabilities")
+			}
+			capsStr := strings.TrimSpace(scanner.Text())
+			capabilities := parseCapabilities(capsStr)
+
+			fmt.Print("Work directory (leave blank for default): ")
+			if !scanner.Scan() {
+				return fmt.Errorf("failed to read work directory")
+			}
+			workDir := strings.TrimSpace(scanner.Text())
+
+			v, err := loadRawViper(configPath)
+			if err != nil {
+				return err
+			}
+
+			var agents []AgentConfig
+			if err := v.UnmarshalKey("agents", &agents); err != nil {
+				return err
+			}
+
+			for _, a := range agents {
+				if a.Name == name {
+					return fmt.Errorf("agent %q already exists", name)
+				}
+			}
+
+			newAgent := AgentConfig{
+				Name:         name,
+				WorkDir:      workDir,
+				Role:         role,
+				Capabilities: capabilities,
+				LLM: LLMConfig{
+					Provider: provider,
+					Model:    model,
+					APIKey:   apiKey,
+					BaseURL:  baseURL,
+				},
+			}
+			agents = append(agents, newAgent)
+			v.Set("agents", agents)
+
+			if v.ConfigFileUsed() == "" {
+				path := configPath
+				if path == "" {
+					path = "config.yaml"
+				}
+				if err := v.WriteConfigAs(path); err != nil {
+					return err
+				}
+			} else {
+				if err := v.WriteConfig(); err != nil {
+					return err
+				}
+			}
+
+			fmt.Printf("Agent %q added to config.yaml. Restart 'mango serve' to apply.\n", name)
+			return nil
+		},
 	}
 }
