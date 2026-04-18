@@ -1,15 +1,15 @@
 [Unit]
-Description=Myapp Agent Gateway
+Description=Mango Agent Gateway
 After=network.target
  
 [Service]
-ExecStart=/usr/local/bin/myapp serve
+ExecStart=/usr/local/bin/mango serve
 Restart=on-failure
 RestartSec=5s
-User=myapp
-Group=myapp
-RuntimeDirectory=myapp
-StateDirectory=myapp
+User=mango
+Group=mango
+RuntimeDirectory=mango
+StateDirectory=mango
 StandardOutput=journal
 StandardError=journal
  

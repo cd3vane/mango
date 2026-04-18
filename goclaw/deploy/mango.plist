@@ -4,10 +4,10 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.myapp.gateway</string>
+  <string>com.mango.gateway</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/local/bin/myapp</string>
+    <string>/usr/local/bin/mango</string>
     <string>serve</string>
   </array>
   <key>RunAtLoad</key>
@@ -15,9 +15,9 @@
   <key>KeepAlive</key>
   <true/>
   <key>StandardOutPath</key>
-  <string>/usr/local/var/log/myapp.log</string>
+  <string>/usr/local/var/log/mango.log</string>
   <key>StandardErrorPath</key>
-  <string>/usr/local/var/log/myapp.err</string>
+  <string>/usr/local/var/log/mango.err</string>
 </dict>
 </plist>
 

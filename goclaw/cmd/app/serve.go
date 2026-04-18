@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/carlosmaranje/goclaw/internal/agent"
+	"github.com/carlosmaranje/goclaw/internal/constants"
 	"github.com/carlosmaranje/goclaw/internal/discord"
 	"github.com/carlosmaranje/goclaw/internal/gateway"
 	"github.com/carlosmaranje/goclaw/internal/llm"
@@ -56,7 +57,7 @@ func runServe(parent context.Context, cfg *Config) error {
 
 		workDir := ac.WorkDir
 		if workDir == "" {
-			workDir = filepath.Join(os.TempDir(), "myapp", ac.Name)
+			workDir = filepath.Join(os.TempDir(), constants.AppName, ac.Name)
 		}
 		mem, err := memory.Open(workDir)
 		if err != nil {

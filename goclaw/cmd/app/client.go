@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/carlosmaranje/goclaw/internal/constants"
 )
 
 type gatewayClient struct {
@@ -70,7 +72,7 @@ func (c *gatewayClient) request(ctx context.Context, method, path string, body a
 
 func wrapConnErr(err error, socketPath string) error {
 	if errors.Is(err, os.ErrNotExist) || strings.Contains(err.Error(), "no such file") || strings.Contains(err.Error(), "connection refused") {
-		return fmt.Errorf("gateway not running at %s — start with `myapp serve` or `systemctl start myapp`", socketPath)
+		return fmt.Errorf("gateway not running at %s — start with `%s serve` or `systemctl start %s`", socketPath, constants.AppName, constants.AppName)
 	}
 	return err
 }

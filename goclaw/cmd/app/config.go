@@ -7,6 +7,8 @@ import (
 	"runtime"
 
 	"github.com/spf13/viper"
+
+	"github.com/carlosmaranje/goclaw/internal/constants"
 )
 
 type LLMConfig struct {
@@ -45,10 +47,10 @@ func defaultSocketPath() string {
 	if runtime.GOOS == "darwin" {
 		home, err := os.UserHomeDir()
 		if err == nil {
-			return filepath.Join(home, ".myapp", "myapp.sock")
+			return filepath.Join(home, "."+constants.AppName, constants.AppName+".sock")
 		}
 	}
-	return "/var/run/myapp/myapp.sock"
+	return fmt.Sprintf("/var/run/%s/%s.sock", constants.AppName, constants.AppName)
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -66,7 +68,7 @@ func loadConfig(path string) (*Config, error) {
 		v.SetConfigType("yaml")
 		v.AddConfigPath(".")
 		v.AddConfigPath("./config")
-		v.AddConfigPath("/etc/myapp")
+		v.AddConfigPath(fmt.Sprintf("/etc/%s", constants.AppName))
 		_ = v.ReadInConfig()
 	}
 

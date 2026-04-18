@@ -1,11 +1,11 @@
-socket_path: /var/run/myapp/myapp.sock
+socket_path: /var/run/mango/mango.sock
 
 discord:
   token: "${DISCORD_TOKEN}"
 
 agents:
   - name: orchestrator
-    work_dir: /var/lib/myapp/agents/orchestrator
+    work_dir: /var/lib/mango/agents/orchestrator
     role: orchestrator
     llm:
       provider: anthropic
@@ -13,7 +13,7 @@ agents:
       api_key: "${ANTHROPIC_API_KEY}"
 
   - name: researcher
-    work_dir: /var/lib/myapp/agents/researcher
+    work_dir: /var/lib/mango/agents/researcher
     capabilities: [web_search]
     llm:
       provider: ollama
@@ -21,7 +21,7 @@ agents:
       base_url: http://localhost:11434/v1
 
   - name: coder
-    work_dir: /var/lib/myapp/agents/coder
+    work_dir: /var/lib/mango/agents/coder
     capabilities: [code_execution]
     llm:
       provider: openai-compatible

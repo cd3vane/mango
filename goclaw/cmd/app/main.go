@@ -8,6 +8,8 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+
+	"github.com/carlosmaranje/goclaw/internal/constants"
 )
 
 var configPath string
@@ -17,12 +19,12 @@ func main() {
 	defer cancel()
 
 	root := &cobra.Command{
-		Use:           "myapp",
+		Use:           constants.AppName,
 		Short:         "Agent Gateway — multi-agent orchestration with Discord and a CLI control plane",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	root.PersistentFlags().StringVar(&configPath, "config", "", "path to config.yaml (default: ./config.yaml or /etc/myapp/config.yaml)")
+	root.PersistentFlags().StringVar(&configPath, "config", "", fmt.Sprintf("path to config.yaml (default: ./config.yaml or /etc/%s/config.yaml)", constants.AppName))
 
 	root.AddCommand(
 		newServeCmd(),
