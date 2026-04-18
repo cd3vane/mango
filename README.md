@@ -21,44 +21,31 @@
 
 ### Installation
 
-You can use the provided `install.sh` script to quickly set up Mango as a systemd service (Linux only):
+> Linux only. Requires Go, `git`, and `systemd`.
 
-#### Quick Install (via curl)
-
-**Install:**
+**1. Clone the repository:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/carlosmaranje/mango/main/install.sh | bash
+git clone https://github.com/carlosmaranje/mango.git
+cd mango
 ```
 
-**Uninstall:**
+**2. Run the installer:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/carlosmaranje/mango/main/install.sh | bash -s -- uninstall
-```
-
-#### Local Installation
-
-If you have already cloned the repository:
-
-```bash
-# To install
 ./install.sh
+```
 
-# To uninstall
+The script builds the binary, creates a `mango` system user, installs the systemd unit, and walks you through configuring your LLM providers and optional Discord bot interactively.
+
+**3. Enable and start the service:**
+```bash
+sudo systemctl enable mango
+sudo systemctl start mango
+```
+
+**To uninstall:**
+```bash
 ./install.sh uninstall
 ```
-
-Alternatively, you can build and run it manually:
-
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/carlosmaranje/mango.git
-    cd mango
-    ```
-
-2.  **Build the binary**:
-    ```bash
-    go build -o mango ./cmd/app
-    ```
 
 ### Configuration
 
