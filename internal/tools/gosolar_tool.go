@@ -52,7 +52,7 @@ func (t *GoSolarTool) Parameters() []Parameter {
 		{
 			Name:        "dayTime",
 			Type:        "number",
-			Description: "Decimal hour (0-24) for the calculation time, optional; defaults to 12 (solar noon)",
+			Description: "Decimal fraction of day (0-1) for the calculation time, optional; defaults to 0.5 (solar noon). Example: 0.25 = 6am, 0.5 = noon, 0.75 = 6pm",
 			Required:    false,
 		},
 	}
@@ -124,10 +124,13 @@ func (t *GoSolarTool) Execute(ctx context.Context, input string) (string, error)
 		req.TimeZone = "UTC"
 	}
 	if req.DayTime == 0 {
-		req.DayTime = 12
+		req.DayTime = 0.5
+	}
+	if req.DayTime < 0 || req.DayTime > 1 {
+		return "", fmt.Errorf("dayTime must be between 0 and 1 (got %f)", req.DayTime)
 	}
 
-	log.Printf("gosolar: calculating for lat=%f lon=%f date=%s tz=%s dayTime=%f",
+	log.Printf("gosolar: calculating for lat=%f lon=%f date=%s tz=%s dayTime=%.4f (fraction of day)",
 		req.Latitude, req.Longitude, req.Date, req.TimeZone, req.DayTime)
 
 	calc, err := gosolar.Calculator(req.Latitude, req.Longitude, req.DayTime, req.TimeZone, req.Date)
