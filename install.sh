@@ -85,7 +85,19 @@ sudo systemctl daemon-reload
 echo "Setting up configuration..."
 sudo mkdir -p /etc/mango
 if [ -f /etc/mango/config.yaml ]; then
-	echo "  /etc/mango/config.yaml already exists — leaving it untouched"
+	echo "  /etc/mango/config.yaml already exists"
+	read -p "  Replace with default config? (y/N) " -n 1 -r </dev/tty
+	echo
+	if [[ $REPLY =~ ^[Yy]$ ]]; then
+		if [ -f config/config.default.yaml ]; then
+			sudo cp config/config.default.yaml /etc/mango/config.yaml
+			echo "  Installed default config with orchestrator + worker agents"
+		else
+			echo "  Warning: config/config.default.yaml not found; keeping existing config"
+		fi
+	else
+		echo "  Keeping existing config"
+	fi
 elif [ -f config/config.default.yaml ]; then
 	sudo cp config/config.default.yaml /etc/mango/config.yaml
 	echo "  Installed default config with orchestrator + worker agents"
@@ -95,7 +107,7 @@ fi
 
 sudo mkdir -p /etc/mango/agents /etc/mango/skills
 echo "  Created /etc/mango/agents and /etc/mango/skills"
-echo "  Run 'mango agent create <name>' to scaffold an agent definition"
+echo "  Run 'mango add agent <name>' to scaffold an agent definition"
 
 # Set ownership
 sudo chown -R mango:mango /etc/mango
