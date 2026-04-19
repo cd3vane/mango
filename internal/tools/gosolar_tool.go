@@ -5,9 +5,28 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/carlosmaranje/gosolar"
 )
+
+func decimalHoursToTime(decimalHours float64) string {
+	hours := int(decimalHours)
+	minutes := int(math.Round((decimalHours - float64(hours)) * 60))
+	if minutes == 60 {
+		hours++
+		minutes = 0
+	}
+	ampm := "AM"
+	displayHour := hours
+	if hours >= 12 {
+		ampm = "PM"
+		if hours > 12 {
+			displayHour = hours - 12
+		}
+	}
+	return fmt.Sprintf("%d:%02d %s", displayHour, minutes, ampm)
+}
 
 type GoSolarTool struct{}
 
@@ -75,11 +94,16 @@ type SolarResult struct {
 	TimeZone   string  `json:"timeZone"`
 	DayTime    float64 `json:"dayTime"`
 	TimingData struct {
-		SolarNoon     float64 `json:"solarNoon"`
-		SunriseTime   float64 `json:"sunriseTime"`
-		SunsetTime    float64 `json:"sunsetTime"`
-		DayLength     float64 `json:"dayLength"`
-		TrueSolarTime float64 `json:"trueSolarTime"`
+		SolarNoon              float64 `json:"solarNoon"`
+		SolarNoonFormatted     string  `json:"solarNoonFormatted"`
+		SunriseTime            float64 `json:"sunriseTime"`
+		SunriseTimeFormatted   string  `json:"sunriseTimeFormatted"`
+		SunsetTime             float64 `json:"sunsetTime"`
+		SunsetTimeFormatted    string  `json:"sunsetTimeFormatted"`
+		DayLength              float64 `json:"dayLength"`
+		DayLengthFormatted     string  `json:"dayLengthFormatted"`
+		TrueSolarTime          float64 `json:"trueSolarTime"`
+		TrueSolarTimeFormatted string  `json:"trueSolarTimeFormatted"`
 	} `json:"timingData"`
 	AngularData struct {
 		SolarZenithAngle    float64 `json:"solarZenithAngle"`
@@ -150,10 +174,15 @@ func (t *GoSolarTool) Execute(ctx context.Context, input string) (string, error)
 	}
 
 	result.TimingData.SolarNoon = calc.SolarNoon()
+	result.TimingData.SolarNoonFormatted = decimalHoursToTime(calc.SolarNoon())
 	result.TimingData.SunriseTime = sunrise
+	result.TimingData.SunriseTimeFormatted = decimalHoursToTime(sunrise)
 	result.TimingData.SunsetTime = sunset
+	result.TimingData.SunsetTimeFormatted = decimalHoursToTime(sunset)
 	result.TimingData.DayLength = calc.DayLength()
+	result.TimingData.DayLengthFormatted = fmt.Sprintf("%.2f hours", calc.DayLength())
 	result.TimingData.TrueSolarTime = calc.TrueSolarTime()
+	result.TimingData.TrueSolarTimeFormatted = decimalHoursToTime(calc.TrueSolarTime())
 
 	result.AngularData.SolarZenithAngle = calc.SolarZenithAngle()
 	result.AngularData.SolarAzimuthAngle = calc.SolarAzimuthAngle()
