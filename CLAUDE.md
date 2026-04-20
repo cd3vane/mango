@@ -40,7 +40,7 @@ CLI (mango <cmd>)
 | `internal/discord` | Discord bot + channel router |
 | `internal/llm` | LLM interface + Anthropic/OpenAI/Ollama clients |
 | `internal/memory` | SQLite key-value store per agent |
-| `internal/tools` | Tool interface (stub, not yet wired) |
+| `internal/tools` | Tool interface, tool registry, built-in tools (GoSolarTool) |
 
 ---
 
@@ -62,7 +62,7 @@ The socket path (Unix domain socket for IPC) can be configured in three ways, in
 
 1. **Config file** (`config.yaml`): Set `socket_path` explicitly
 2. **Environment variable**: `MANGO_SOCKET_PATH=/path/to/socket`
-3. **Default**: 
+3. **Default**:
    - macOS: `~/.mango/mango.sock`
    - Linux: `/var/run/mango/mango.sock`
 
@@ -76,7 +76,7 @@ mango serve
 
 ## Installation (Linux)
 
-`install.sh` builds the binary, installs the systemd unit, creates the `mango` system user, and writes a starter config to `/etc/mango/config.yaml` from `config/config.default.yaml` (orchestrator + worker scaffolding with empty LLM fields). It also seeds the per-agent prompt directory by copying `config/agents/<name>/PULSE.md` → `/etc/mango/agents/<name>/PULSE.md` for any agent whose prompt file doesn't yet exist. It then runs two optional interactive prompts:
+`install.sh` builds the binary, installs the systemd unit, creates the `mango` system user, and writes a starter config to `/etc/mango/config.yaml` from `config/config.default.yaml` (orchestrator + worker scaffolding with empty LLM fields). It also seeds the agent definition files by copying `config/agents/<name>.md` → `/etc/mango/agents/<name>.md` for any agent whose definition file doesn't yet exist. It then runs two optional interactive prompts:
 
 - **Discord setup**: asks for a bot token, then whether to bind the bot globally (all channels → orchestrator) or to a comma-separated list of channel IDs (each bound to a chosen agent, default `worker`). A `discord:` block (and `bindings:` if channels were provided) is prepended to the installed config.
 - **LLM setup**: for each of `orchestrator` and `worker`, prompts for provider / model / api_key / base_url and applies them via `mango config agent edit`. Leaving provider blank skips that agent.
@@ -85,14 +85,56 @@ Skipping either step prints an `ACTION REQUIRED` block with the file path to edi
 
 ---
 
-## Agent Personalities — PULSE.md
+## Agent Personalities & Skills — Definition Files
 
-Every agent's system prompt lives in a Markdown file named `PULSE.md` under `<configDir>/agents/<agent-name>/PULSE.md`, where `<configDir>` is the directory containing the loaded `config.yaml`. For the default install that resolves to `/etc/mango/agents/<agent-name>/PULSE.md`.
+Agent system prompts are assembled at startup by combining agent definition files with skill definitions.
 
-- **No hardcoded prompts.** `internal/agent/runner.go` and `internal/orchestrator/orchestrator.go` no longer carry a default system prompt string. At startup, `serve.go` reads each agent's `PULSE.md`, trims it, and sets `Agent.SystemPrompt`. Startup fails hard if the file is missing or empty — this is intentional: an agent with no persona should not silently run with stub behavior.
-- **Orchestrator PULSE.md** must encode the JSON schema contract (`action`, `tasks`, `final`) that `parseOrchestratorResponse` expects. The orchestrator explicitly requests JSON mode from the LLM provider when possible. The dynamic agent catalog (names + capabilities pulled from the live registry) is still appended by `orchestrator.agentCatalog()`; don't duplicate it in the MD.
-- **Worker / custom agents** can contain any persona, tone, tool-use guidelines, etc. Edit `PULSE.md`, then `sudo systemctl restart mango` to reload.
-- **Path helper**: `AgentPromptPath(configDir, agentName)` in `cmd/app/config.go` is the single source of truth for where the file lives; the filename constant is `AgentPromptFile = "PULSE.md"`.
+### Agent Definition Files
+
+Each agent has a corresponding `.md` file (e.g., `ORCHESTRATOR.md`, `WORKER.md`, `researcher.md`) in the agents directory, configurable via `MANGO_AGENTS_DIR` (default: `/etc/mango/agents/`). For the default install:
+- Orchestrator: `/etc/mango/agents/ORCHESTRATOR.md`
+- Worker: `/etc/mango/agents/WORKER.md`
+
+- **No hardcoded prompts.** At startup, `serve.go` reads each agent's definition file, trims it, appends any skills' definitions (in order), and sets `Agent.SystemPrompt`. Startup fails hard if the file is missing or empty — this is intentional: an agent with no persona should not silently run with stub behavior.
+- **Orchestrator definition** must encode the JSON schema contract (`action`, `tasks`, `final`) that `parseOrchestratorResponse` expects. The orchestrator explicitly requests JSON mode from the LLM provider when possible. The dynamic agent catalog (names + skills pulled from the live registry) is still appended by `orchestrator.agentCatalog()`; don't duplicate it in the .md file.
+- **Worker / custom agents** can contain any persona, tone, tool-use guidelines, etc. Edit the agent definition file, then `sudo systemctl restart mango` to reload.
+
+### Skills
+
+Skills are reusable system prompt snippets stored as `.md` files in the skills directory, configurable via `MANGO_SKILLS_DIR` (default: `/etc/mango/skills/`). Skills are declared in the agent config and their definitions are automatically appended to the agent's system prompt at startup, in the order listed.
+
+Example skill definition:
+```markdown
+# Web Search Skill
+
+You have access to a web search tool. Use it to find current information.
+
+## Guidelines
+- Search for recent information when needed
+- Cite sources in your responses
+```
+
+To use a skill, list it in the agent config:
+```yaml
+agents:
+  - name: researcher
+    skills:
+      - web_search
+      - code_analysis
+```
+
+At startup, the system prompt is assembled as:
+```
+[researcher.md content]
+
+---
+
+[web_search.md content]
+
+---
+
+[code_analysis.md content]
+```
 
 ---
 
@@ -102,19 +144,16 @@ Every agent's system prompt lives in a Markdown file named `PULSE.md` under `<co
 Edit `/etc/mango/config.yaml` (or use the `mango config` CLI) to define your agents, LLM providers, and optionally Discord and bindings. The repo ships `config/config.default.yaml` as the minimal two-agent (orchestrator + worker) starter used by `install.sh`.
 
 ```yaml
-# socket_path is optional (uses default if omitted):
-# socket_path: /custom/path/mango.sock
-
 agents:
-  - name: manager
-    role: orchestrator              # optional: acts as task orchestrator
+  - name: orchestrator
+    role: orchestrator              # marks this agent as the task decomposer
     llm:
       provider: anthropic
-      model: claude-3-5-haiku-20241022
+      model: claude-sonnet-4-20250514
       api_key: ${ANTHROPIC_API_KEY}
 
   - name: researcher
-    capabilities: [research, summarize]
+    skills: [web_search, summarize]  # skills are appended to agent's system prompt
     llm:
       provider: ollama
       model: qwen2.5-coder
@@ -200,8 +239,18 @@ mango task submit "goal"
 
 ---
 
+## Built-in Tools
+
+### GoSolarTool
+Calculates solar position and timing data (sunrise, sunset, solar noon) for any location. Useful for time-based scheduling, solar event alerts, or environmental monitoring.
+
+**Input**: Latitude, longitude, date, timezone
+**Output**: Sunrise time, sunset time, solar noon, solar position (elevation, azimuth)
+
+Usage: Agents with access to this tool can calculate solar data directly without external APIs.
+
 ## Notable Gaps (Current State)
-- `tools.Tool` interface exists but no implementations are wired to agents yet
 - Token cap is hardcoded at 1024 per LLM call (`runner.go`)
 - Orchestrator fails hard if goal takes more than 5 orchestration steps
 - Anthropic prompt caching is not enabled — each Discord turn re-sends the full history uncached
+- Additional tools beyond GoSolarTool are not yet implemented
