@@ -85,7 +85,19 @@ sudo systemctl daemon-reload
 echo "Setting up configuration..."
 sudo mkdir -p /etc/mango
 if [ -f /etc/mango/config.yaml ]; then
-	echo "  /etc/mango/config.yaml already exists — leaving it untouched"
+	echo "  /etc/mango/config.yaml already exists"
+	read -p "  Replace with default config? (y/N) " -n 1 -r </dev/tty
+	echo
+	if [[ $REPLY =~ ^[Yy]$ ]]; then
+		if [ -f config/config.default.yaml ]; then
+			sudo cp config/config.default.yaml /etc/mango/config.yaml
+			echo "  Installed default config with orchestrator + worker agents"
+		else
+			echo "  Warning: config/config.default.yaml not found; keeping existing config"
+		fi
+	else
+		echo "  Keeping existing config"
+	fi
 elif [ -f config/config.default.yaml ]; then
 	sudo cp config/config.default.yaml /etc/mango/config.yaml
 	echo "  Installed default config with orchestrator + worker agents"
@@ -95,10 +107,31 @@ fi
 
 sudo mkdir -p /etc/mango/agents /etc/mango/skills
 echo "  Created /etc/mango/agents and /etc/mango/skills"
-echo "  Run 'mango agent create <name>' to scaffold an agent definition"
+
+# Install default agent definitions
+for agent in ORCHESTRATOR WORKER; do
+	agent_file="config/agents/${agent}.md"
+	if [ -f "$agent_file" ]; then
+		target="/etc/mango/agents/${agent}.md"
+		if [ -f "$target" ]; then
+			echo "  $target already exists"
+			read -p "    Replace? (y/N) " -n 1 -r </dev/tty
+			echo
+			if [[ $REPLY =~ ^[Yy]$ ]]; then
+				sudo cp "$agent_file" "$target"
+				echo "    Updated $agent.md"
+			fi
+		else
+			sudo cp "$agent_file" "$target"
+			echo "    Installed $agent.md"
+		fi
+	fi
+done
+
+echo "  Run 'mango agent create <name>' to scaffold a new agent definition"
 
 # Set ownership
-sudo chown -R mango:mango /etc/mango
+sudo chown -R mango:mango /etc/mango /etc/mango/agents
 sudo chown mango:mango /usr/local/bin/mango
 
 # Optional interactive Discord setup

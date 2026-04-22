@@ -1,13 +1,28 @@
-# 🥭 Mango
 
-**Mango** is a multi-agent orchestration gateway that brings the power of agentic AI to Discord and your terminal. It allows you to define specialized agents with different capabilities and LLM backends, orchestrated by a central orchestrator to solve complex tasks.
+  
+                                ███╗   ███╗ █████╗ ███╗   ██╗ ██████╗  ██████╗
+                                ████╗ ████║██╔══██╗████╗  ██║██╔════╝ ██╔═══██╗
+                                ██╔████╔██║███████║██╔██╗ ██║██║  ███╗██║   ██║
+                                ██║╚██╔╝██║██╔══██║██║╚██╗██║██║   ██║██║   ██║
+                                ██║ ╚═╝ ██║██║  ██║██║ ╚████║╚██████╔╝╚██████╔╝
+                                ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝  ╚═════╝
+                                          ...napping in progress
+
+
+> Mango is a lazy orange cat who loves to eat, sleep, and — on good days — orchestrate AI agents.
+> It's also a tropical fruit.
+> Mostly, though, it naps.
+
+**Mango** is a multi-agent orchestration gateway that brings the power of agentic AI to Discord and your terminal. Define specialized agents with different capabilities and LLM backends; a central orchestrator decomposes goals into parallel sub-tasks and fans them out while the cat sleeps.
 
 ## ✨ Features
 
 - **Multi-Agent Orchestration**: Automatically decompose high-level goals into sub-tasks for specialized agents.
 - **Provider Agnostic**: Built-in support for **Anthropic**, **OpenAI**, and local models via **Ollama**.
+- **Flexible Agent Personalities**: Define agent behaviors via markdown files (agent definitions) and reusable skills.
 - **Discord Integration**: Interact with specific agents or the whole system through Discord channels. See [DISCORD_SETUP.md](DISCORD_SETUP.md) for a detailed guide.
 - **CLI Control Plane**: A powerful command-line interface to manage the gateway, check status, and dispatch tasks.
+- **Built-in Tools**: Agents can access tools like GoSolarTool for calculations without external APIs.
 - **Persistent Memory**: SQLite-backed key-value store for agents to maintain state across sessions.
 - **Unix Socket Gateway**: Efficient local communication between the CLI and the background server.
 
@@ -93,25 +108,76 @@ You can use the CLI to initialize and manage your configuration:
 ./mango config agent add researcher --provider ollama --model llama3.2
 ```
 
+### Agent Definitions & Skills
+
+Each agent's system prompt is defined in a `.md` file located in the agents directory (default: `/etc/mango/agents/`). For example:
+
+**Orchestrator Agent** (`/etc/mango/agents/ORCHESTRATOR.md`):
+```markdown
+# Orchestrator Agent
+
+You are a task orchestrator. Your role is to decompose user goals into parallel sub-tasks and delegate them to specialized agents.
+
+## Core Responsibility
+
+When given a goal, analyze it to determine:
+1. Whether it can be solved in one step or requires multiple sub-tasks
+2. Which agents are best suited for each sub-task
+3. How to combine their results into a final answer
+
+## Response Format
+
+You MUST respond ONLY with a valid JSON object:
+...
+```
+
+**Skills** are reusable system prompt snippets stored as `.md` files in the skills directory (default: `/etc/mango/skills/`). List skills in your agent config and they are automatically appended to the agent's system prompt at startup:
+
+```yaml
+agents:
+  - name: researcher
+    skills: [web_search, code_analysis]
+    llm:
+      provider: ollama
+      model: llama3.2
+```
+
+At startup, the researcher agent's system prompt is assembled as:
+```
+[researcher.md content]
+
+---
+
+[web_search.md content]
+
+---
+
+[code_analysis.md content]
+```
+
 Example configuration structure:
 
 ```yaml
-discord:
-  token: "YOUR_DISCORD_TOKEN"
-
 agents:
   - name: orchestrator
     role: orchestrator
     llm:
       provider: anthropic
-      model: claude-3-5-sonnet-latest
+      model: claude-sonnet-4-20250514
       api_key: "${ANTHROPIC_API_KEY}"
 
   - name: researcher
-    capabilities: [web_search]
+    skills: [web_search]
     llm:
       provider: ollama
       model: llama3.2
+
+discord:
+  token: "${DISCORD_TOKEN}"
+
+bindings:
+  - channel_id: "123456789"
+    agent: researcher
 ```
 
 ## Usage
@@ -142,6 +208,27 @@ You can interact with the running gateway from another terminal:
   ```bash
   ./mango agent list
   ```
+
+## 🛠️ Built-in Tools
+
+Mango includes built-in tools that agents can access:
+
+### GoSolarTool
+Calculates solar position and timing data (sunrise, sunset, solar noon) for any location.
+
+**Inputs:**
+- Latitude: Decimal degrees (-90 to 90)
+- Longitude: Decimal degrees (-180 to 180)
+- Date: YYYY-MM-DD format
+- Timezone: IANA timezone string (e.g., "America/New_York")
+
+**Outputs:**
+- Sunrise time
+- Sunset time
+- Solar noon
+- Solar position (elevation and azimuth angles)
+
+Example use cases: Solar event alerts, time-based scheduling, environmental monitoring.
 
 ## 📦 Deployment
 
